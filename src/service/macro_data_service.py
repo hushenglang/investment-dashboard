@@ -1,119 +1,118 @@
-import os
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-
 import pandas as pd
-from fredapi import Fred
-from dotenv import load_dotenv
+from datetime import datetime
 
+from client.fred_macro_data_client import FredMacroDataClient
+from repo.macro_indicator_repo import MacroIndicatorRepository
 from config.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 class MacroDataService:
-    """Service for fetching macroeconomic data from FRED."""
+    """Service for fetching and storing macroeconomic data."""
     
     def __init__(self):
-        """Initialize the MacroDataService with FRED API credentials."""
-        load_dotenv()
-        self.fred_api_key = os.getenv('FRED_API_KEY')
-        if not self.fred_api_key:
-            raise ValueError("FRED API key not found. Please set FRED_API_KEY in .env file")
-        self.fred = Fred(api_key=self.fred_api_key)
-        logger.info("MacroDataService initialized with FRED API key")
-
-    def _get_date_range(self) -> tuple[datetime, datetime]:
+        """Initialize the MacroDataService with FRED client and repository."""
+        self.fred_client = FredMacroDataClient()
+        self.repo = MacroIndicatorRepository()
+        logger.info("MacroDataService initialized")
+    
+    def fetch_and_store_indicators(self):
         """
-        Get the date range for the last 6 months.
-        Returns:
-            tuple: (start_date, end_date)
-        """
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=180)  # Approximately 6 months
-        return start_date, end_date
-
-    def get_leading_index(self) -> pd.DataFrame:
-        """
-        Fetch the Leading Index for the United States (USALOLITOAASTSAM) from FRED.
-        Returns:
-            pd.DataFrame: DataFrame containing the leading index data for the last 6 months
+        Fetch indicators from FRED and store them in the database.
         """
         try:
-            start_date, end_date = self._get_date_range()
-            series_id = 'USALOLITOAASTSAM'
-            
-            logger.info(
-                "Fetching FRED series: %s with parameters: start_date=%s, end_date=%s",
-                series_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
-            )
-            
-            data = self.fred.get_series(
-                series_id,
-                observation_start=start_date,
-                observation_end=end_date
-            )
-            
-            logger.info("Successfully fetched %d observations for series %s", len(data), series_id)
-            
-            return pd.DataFrame({
-                'date': data.index,
-                'leading_index': data.values
-            })
+            logger.info("Fetching indicators from FRED")
+            combined_data = self.fred_client.get_combined_indicators()
+            self._save_indicators_to_db(combined_data)
+            logger.info("Successfully fetched and stored indicators")
+            return True
         except Exception as e:
-            logger.error("Error fetching Leading Index data: %s", str(e))
-            raise Exception(f"Error fetching Leading Index data: {str(e)}")
-
-    def get_bbk_index(self) -> pd.DataFrame:
+            logger.error("Error in fetch_and_store_indicators: %s", str(e))
+            raise
+    
+    def _save_indicators_to_db(self, data: pd.DataFrame):
         """
-        Fetch the Bundesbank Leading Index (BBKMLEIX) from FRED.
-        Returns:
-            pd.DataFrame: DataFrame containing the BBK index data for the last 6 months
+        Save the fetched indicators to the database.
+        
+        Args:
+            data: DataFrame containing the indicators data
         """
         try:
-            start_date, end_date = self._get_date_range()
-            series_id = 'BBKMLEIX'
-            
-            logger.info(
-                "Fetching FRED series: %s with parameters: start_date=%s, end_date=%s",
-                series_id, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
-            )
-            
-            data = self.fred.get_series(
-                series_id,
-                observation_start=start_date,
-                observation_end=end_date
-            )
-            
-            logger.info("Successfully fetched %d observations for series %s", len(data), series_id)
-            
-            return pd.DataFrame({
-                'date': data.index,
-                'bbk_index': data.values
-            })
-        except Exception as e:
-            logger.error("Error fetching BBK Leading Index data: %s", str(e))
-            raise Exception(f"Error fetching BBK Leading Index data: {str(e)}")
+            saved_count = 0
+            for _, row in data.iterrows():
+                date = row['date']
+                
+                # Process Leading Index
+                if 'leading_index' in row and not pd.isna(row['leading_index']):
+                    indicator_type = "USALOLITOAASTSAM"
+                    indicator_name = "US_LEADING_INDEX"
+                    value = float(row['leading_index'])
+                    
+                    # Check and delete existing record
+                    existing_record = self.repo.find_by_type_and_date(indicator_type, date)
+                    if existing_record:
+                        self.repo.delete(existing_record)
+                        logger.debug("Deleted existing %s record for date %s", indicator_name, date.strftime('%Y-%m-%d'))
+                    
+                    # Save new record
+                    self.repo.create(
+                        type=indicator_type,
+                        indicator_name=indicator_name,
+                        value=value,
+                        date_time=date,
+                        is_leading_indicator=True
+                    )
+                    saved_count += 1
+                
+                # Process BBK Index
+                if 'bbk_index' in row and not pd.isna(row['bbk_index']):
+                    indicator_type = "BBKMLEIX"
+                    indicator_name = "BBK_LEADING_INDEX"
+                    value = float(row['bbk_index'])
 
-    def get_combined_indicators(self) -> pd.DataFrame:
+                    # Check and delete existing record
+                    existing_record = self.repo.find_by_type_and_date(indicator_type, date)
+                    if existing_record:
+                        self.repo.delete(existing_record)
+                        logger.debug("Deleted existing %s record for date %s", indicator_name, date.strftime('%Y-%m-%d'))
+
+                    # Save new record
+                    self.repo.create(
+                        type=indicator_type,
+                        indicator_name=indicator_name,
+                        value=value,
+                        date_time=date,
+                        is_leading_indicator=True
+                    )
+                    saved_count += 1
+            
+            logger.info("Saved %d indicator records to database", saved_count)
+        except Exception as e:
+            logger.error("Error saving indicators to database: %s", str(e))
+            self.repo.session.rollback()
+            raise
+        finally:
+            self.repo.close()
+    
+    def get_latest_indicators(self):
         """
-        Fetch and combine both indicators into a single DataFrame.
+        Retrieve the latest indicators from the database.
+        
         Returns:
-            pd.DataFrame: DataFrame containing both indicators for the last 6 months
+            Dictionary containing the latest indicator values
         """
-        logger.info("Fetching and combining indicators")
-        leading_index = self.get_leading_index()
-        bbk_index = self.get_bbk_index()
-        
-        # Merge the two dataframes on date
-        combined_df = pd.merge(
-            leading_index,
-            bbk_index,
-            on='date',
-            how='outer'
-        )
-        
-        # Sort by date
-        combined_df = combined_df.sort_values('date')
-        
-        logger.info("Successfully combined indicators, final shape: %s", str(combined_df.shape))
-        return combined_df
+        try:
+            us_indicators = self.repo.get_by_name("US_LEADING_INDEX")
+            bbk_indicators = self.repo.get_by_name("BBK_LEADING_INDEX")
+            
+            latest_data = {
+                "US_LEADING_INDEX": max(us_indicators, key=lambda x: x.date_time).value if us_indicators else None,
+                "BBK_LEADING_INDEX": max(bbk_indicators, key=lambda x: x.date_time).value if bbk_indicators else None
+            }
+            
+            return latest_data
+        except Exception as e:
+            logger.error("Error retrieving latest indicators: %s", str(e))
+            raise
+        finally:
+            self.repo.close()

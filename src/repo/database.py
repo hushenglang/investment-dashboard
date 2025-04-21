@@ -2,8 +2,8 @@ import pymysql
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
-from src.config.db_config import DATABASE_URL
-from src.repo.models import Base
+from config.db_config import DATABASE_URL
+from repo.model.models import Base
 
 # Register PyMySQL with SQLAlchemy
 pymysql.install_as_MySQLdb()

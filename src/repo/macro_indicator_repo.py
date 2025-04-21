@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
-from src.repo.models import MacroIndicator
-from src.repo.database import get_db_session
+from repo.model.models import MacroIndicator
+from repo.database import get_db_session
 
 class MacroIndicatorRepository:
     """
@@ -92,6 +92,27 @@ class MacroIndicatorRepository:
         """
         return self.session.query(MacroIndicator).filter(MacroIndicator.indicator_name == name).all()
     
+    def find_by_type_and_date(self, indicator_type: str, date_time: date) -> Optional[MacroIndicator]:
+        """
+        Find a macro indicator by its type and date.
+        
+        Args:
+            indicator_type: The type of the indicator.
+            date_time: The date of the indicator value (datetime.date object).
+            
+        Returns:
+            The MacroIndicator instance or None if not found.
+        """
+        # Ensure date comparison is done only on the date part if date_time is datetime
+        start_of_day = datetime.combine(date_time, datetime.min.time())
+        end_of_day = datetime.combine(date_time, datetime.max.time())
+
+        return self.session.query(MacroIndicator)\
+            .filter(MacroIndicator.type == indicator_type)\
+            .filter(MacroIndicator.date_time >= start_of_day)\
+            .filter(MacroIndicator.date_time <= end_of_day)\
+            .first()
+    
     def update(self, indicator_id: int, **kwargs) -> Optional[MacroIndicator]:
         """
         Update a macro indicator by ID.
@@ -114,23 +135,25 @@ class MacroIndicatorRepository:
         
         return indicator
     
-    def delete(self, indicator_id: int) -> bool:
+    def delete(self, indicator: MacroIndicator) -> bool:
         """
-        Delete a macro indicator by ID.
+        Delete a specific macro indicator record.
         
         Args:
-            indicator_id: The ID of the indicator to delete
+            indicator: The MacroIndicator instance to delete.
             
         Returns:
-            True if deleted, False if not found
+            True if deleted successfully, raises exception otherwise.
         """
-        indicator = self.get_by_id(indicator_id)
-        if indicator:
+        try:
             self.session.delete(indicator)
             self.session.commit()
             return True
-        
-        return False
+        except Exception as e:
+            self.session.rollback()
+            # Optionally log the error here
+            print(f"Error deleting indicator: {e}") # Replace with logger if available
+            raise # Re-raise the exception to signal failure
         
     def close(self):
         """Close the database session."""
