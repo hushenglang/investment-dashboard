@@ -1,5 +1,5 @@
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from client.fred_macro_data_client import FredMacroDataClient
 from repo.macro_indicator_repo import MacroIndicatorRepository
@@ -16,21 +16,26 @@ class MacroDataService:
         self.repo = MacroIndicatorRepository()
         logger.info("MacroDataService initialized")
     
-    def fetch_and_store_indicators(self):
+
+    #todo: add treasury yields and spreads
+    
+    def fetch_and_store_leading_indicators(self):
         """
         Fetch indicators from FRED and store them in the database.
         """
         try:
             logger.info("Fetching indicators from FRED")
-            combined_data = self.fred_client.get_combined_indicators()
-            self._save_indicators_to_db(combined_data)
+            start_date = datetime.now() - timedelta(days=180)
+            end_date = datetime.now()
+            combined_data = self.fred_client.get_leading_indicators(start_date, end_date)
+            self._save_leading_indicators_to_db(combined_data)
             logger.info("Successfully fetched and stored indicators")
             return True
         except Exception as e:
             logger.error("Error in fetch_and_store_indicators: %s", str(e))
             raise
     
-    def _save_indicators_to_db(self, data: pd.DataFrame):
+    def _save_leading_indicators_to_db(self, data: pd.DataFrame):
         """
         Save the fetched indicators to the database.
         
