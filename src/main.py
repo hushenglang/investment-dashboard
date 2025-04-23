@@ -7,7 +7,10 @@ def main():
         # Initialize the service
         macro_service = MacroDataService()
         
-        macro_service.fetch_and_store_indicators()
+        # macro_service.fetch_and_store_indicators()
+
+
+        macro_service.fetch_and_store_treasury_data()
       
 
     except Exception as e:
