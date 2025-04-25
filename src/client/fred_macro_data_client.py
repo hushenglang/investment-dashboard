@@ -177,3 +177,77 @@ class FredMacroDataClient:
 
         logger.info("Calculated Treasury yields and spreads: %s", result)
         return result
+
+    def get_consumer_indices(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[float]]:
+        """
+        Fetch the latest values for consumer-related indicators from FRED:
+        - TOTALSL: Total Consumer Credit
+        - UMCSENT: University of Michigan Consumer Sentiment
+        - DSPIC96: Real Disposable Personal Income
+
+        Args:
+            start_date (datetime): The start date for the observation period.
+            end_date (datetime): The end date for the observation period.
+
+        Returns:
+            Dict[str, Optional[float]]: A dictionary containing the latest available values
+                                         for consumer-related indicators.
+                                         Returns None for a value if data is unavailable or an error occurs.
+        """
+        series_map = {
+            'consumer_credit': 'TOTALSL',
+            'consumer_sentiment': 'UMCSENT',
+            'disposable_income': 'DSPIC96'
+        }
+        latest_values: Dict[str, Optional[float]] = {}
+        fetch_errors: List[str] = []
+
+        logger.info("Fetching latest consumer indicator values...")
+        for key, series_id in series_map.items():
+            value = self._get_latest_fred_series_value(series_id, start_date, end_date)
+            latest_values[key] = value
+            if value is None:
+                fetch_errors.append(key)
+
+        if fetch_errors:
+            logger.warning("Failed to fetch/process latest data for consumer indicators: %s", ", ".join(fetch_errors))
+            # Continue returning partial data
+
+        logger.info("Fetched latest consumer indices: %s", latest_values)
+        return latest_values
+
+    def get_financial_condition_indices(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[float]]:
+        """
+        Fetch the latest values for financial condition indicators from FRED:
+        - NFCI: Chicago Fed National Financial Conditions Index
+        - ANFCI: Chicago Fed Adjusted National Financial Conditions Index
+
+        Args:
+            start_date (datetime): The start date for the observation period.
+            end_date (datetime): The end date for the observation period.
+
+        Returns:
+            Dict[str, Optional[float]]: A dictionary containing the latest available values
+                                         for financial condition indicators.
+                                         Returns None for a value if data is unavailable or an error occurs.
+        """
+        series_map = {
+            'national_financial_conditions': 'NFCI',
+            'adjusted_financial_conditions': 'ANFCI'
+        }
+        latest_values: Dict[str, Optional[float]] = {}
+        fetch_errors: List[str] = []
+
+        logger.info("Fetching latest financial condition indicator values...")
+        for key, series_id in series_map.items():
+            value = self._get_latest_fred_series_value(series_id, start_date, end_date)
+            latest_values[key] = value
+            if value is None:
+                fetch_errors.append(key)
+
+        if fetch_errors:
+            logger.warning("Failed to fetch/process latest data for financial condition indicators: %s", ", ".join(fetch_errors))
+            # Continue returning partial data
+
+        logger.info("Fetched latest financial condition indices: %s", latest_values)
+        return latest_values

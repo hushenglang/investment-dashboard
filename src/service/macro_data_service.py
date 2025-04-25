@@ -17,9 +17,6 @@ class MacroDataService:
         self.repo = MacroIndicatorRepository()
         logger.info("MacroDataService initialized")
     
-
-    #todo: add fetch and store treasury yields and spreads  
-    
     def fetch_and_store_leading_indicators(self):
         """
         Fetch indicators from FRED and store them in the database.
@@ -185,3 +182,140 @@ class MacroDataService:
             raise
         finally:
             self.repo.close()
+
+    def fetch_and_store_consumer_indices(self):
+        """
+        Fetch consumer-related indices from FRED and store them in the database.
+        
+        This method fetches the latest values for:
+        - Consumer credit (TOTALSL)
+        - Consumer sentiment (UMCSENT)
+        - Disposable income (DSPIC96)
+        
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching consumer indices from FRED")
+            start_date = datetime.now() - timedelta(days=180)
+            end_date = datetime.now()
+            consumer_data = self.fred_client.get_consumer_indices(start_date, end_date)
+            self._save_consumer_indices_to_db(consumer_data)
+            logger.info("Successfully fetched and stored consumer indices")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_consumer_indices: %s", str(e))
+            raise
+    
+    def _save_consumer_indices_to_db(self, data: Dict[str, Optional[float]]):
+        """
+        Save the fetched consumer indices to the database.
+        
+        Args:
+            data: Dictionary containing the consumer indices
+        """
+        try:
+            saved_count = 0
+            current_date = datetime.now()
+            
+            # Map of data keys to database indicator types and names
+            consumer_indicators = {
+                'consumer_credit': ('TOTALSL', 'CONSUMER_CREDIT'),
+                'consumer_sentiment': ('UMCSENT', 'CONSUMER_SENTIMENT'),
+                'disposable_income': ('DSPIC96', 'DISPOSABLE_INCOME')
+            }
+            
+            for data_key, (indicator_type, indicator_name) in consumer_indicators.items():
+                value = data.get(data_key)
+                if value is not None:
+                    # Check and delete existing record
+                    existing_record = self.repo.find_by_type_and_date(indicator_type, current_date)
+                    if existing_record:
+                        self.repo.delete(existing_record)
+                        logger.debug("Deleted existing %s record for date %s", indicator_name, current_date.strftime('%Y-%m-%d'))
+                    
+                    # Save new record
+                    self.repo.create(
+                        type=indicator_type,
+                        indicator_name=indicator_name,
+                        value=float(value),
+                        date_time=current_date,
+                        is_leading_indicator=False
+                    )
+                    saved_count += 1
+            
+            logger.info("Saved %d consumer index records to database", saved_count)
+        except Exception as e:
+            logger.error("Error saving consumer indices to database: %s", str(e))
+            self.repo.session.rollback()
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_financial_condition_indices(self):
+        """
+        Fetch financial condition indices from FRED and store them in the database.
+        
+        This method fetches the latest values for:
+        - National Financial Conditions Index (NFCI)
+        - Adjusted National Financial Conditions Index (ANFCI)
+        
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching financial condition indices from FRED")
+            start_date = datetime.now() - timedelta(days=180)
+            end_date = datetime.now()
+            financial_data = self.fred_client.get_financial_condition_indices(start_date, end_date)
+            self._save_financial_condition_indices_to_db(financial_data)
+            logger.info("Successfully fetched and stored financial condition indices")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_financial_condition_indices: %s", str(e))
+            raise
+    
+    def _save_financial_condition_indices_to_db(self, data: Dict[str, Optional[float]]):
+        """
+        Save the fetched financial condition indices to the database.
+        
+        Args:
+            data: Dictionary containing the financial condition indices
+        """
+        try:
+            saved_count = 0
+            current_date = datetime.now()
+            
+            # Map of data keys to database indicator types and names
+            financial_indicators = {
+                'national_financial_conditions': ('NFCI', 'NATIONAL_FINANCIAL_CONDITIONS'),
+                'adjusted_financial_conditions': ('ANFCI', 'ADJUSTED_FINANCIAL_CONDITIONS')
+            }
+            
+            for data_key, (indicator_type, indicator_name) in financial_indicators.items():
+                value = data.get(data_key)
+                if value is not None:
+                    # Check and delete existing record
+                    existing_record = self.repo.find_by_type_and_date(indicator_type, current_date)
+                    if existing_record:
+                        self.repo.delete(existing_record)
+                        logger.debug("Deleted existing %s record for date %s", indicator_name, current_date.strftime('%Y-%m-%d'))
+                    
+                    # Save new record
+                    self.repo.create(
+                        type=indicator_type,
+                        indicator_name=indicator_name,
+                        value=float(value),
+                        date_time=current_date,
+                        is_leading_indicator=False
+                    )
+                    saved_count += 1
+            
+            logger.info("Saved %d financial condition index records to database", saved_count)
+        except Exception as e:
+            logger.error("Error saving financial condition indices to database: %s", str(e))
+            self.repo.session.rollback()
+            raise
+        finally:
+            self.repo.close()
+

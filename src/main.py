@@ -10,7 +10,7 @@ def main():
         # macro_service.fetch_and_store_indicators()
 
 
-        macro_service.fetch_and_store_treasury_data()
+        macro_service.fetch_and_store_financial_condition_indices()
       
 
     except Exception as e:
