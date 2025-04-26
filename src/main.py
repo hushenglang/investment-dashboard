@@ -10,7 +10,7 @@ def main():
         # macro_service.fetch_and_store_indicators()
 
 
-        macro_service.fetch_and_store_pmi_indicators()
+        macro_service.fetch_and_store_commodity_prices()
       
 
     except Exception as e:
