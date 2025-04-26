@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 
 from client.fred_macro_data_client import FredMacroDataClient
+from client.trading_economics_client import TradingEconomicsClient
 from repo.macro_indicator_repo import MacroIndicatorRepository
 from config.logging_config import get_logger
 
@@ -14,6 +15,7 @@ class MacroDataService:
     def __init__(self):
         """Initialize the MacroDataService with FRED client and repository."""
         self.fred_client = FredMacroDataClient()
+        self.trading_economics_client = TradingEconomicsClient()
         self.repo = MacroIndicatorRepository()
         logger.info("MacroDataService initialized")
     
@@ -314,6 +316,75 @@ class MacroDataService:
             logger.info("Saved %d financial condition index records to database", saved_count)
         except Exception as e:
             logger.error("Error saving financial condition indices to database: %s", str(e))
+            self.repo.session.rollback()
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_pmi_indicators(self):
+        """
+        Fetch PMI indicators from Trading Economics and store them in the database.
+        
+        This method fetches the latest values for:
+        - ISM Manufacturing PMI
+        - ISM Services PMI
+        - Composite PMI
+        
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching PMI indicators from Trading Economics")
+            start_date = datetime.now() - timedelta(days=180)
+            end_date = datetime.now()
+            pmi_data = self.trading_economics_client.get_pmi_indicators(start_date, end_date)
+            self._save_pmi_indicators_to_db(pmi_data)
+            logger.info("Successfully fetched and stored PMI indicators")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_pmi_indicators: %s", str(e))
+            raise
+    
+    def _save_pmi_indicators_to_db(self, data: Dict[str, Optional[float]]):
+        """
+        Save the fetched PMI indicators to the database.
+        
+        Args:
+            data: Dictionary containing the PMI indicators
+        """
+        try:
+            saved_count = 0
+            current_date = datetime.now()
+            
+            # Map of data keys to database indicator types and names
+            pmi_indicators = {
+                'manufacturing_pmi': ('ISM_MAN_PMI', 'MANUFACTURING_PMI'),
+                'services_pmi': ('ISM_SERV_PMI', 'SERVICES_PMI'),
+                'composite_pmi': ('COMP_PMI', 'COMPOSITE_PMI')
+            }
+            
+            for data_key, (indicator_type, indicator_name) in pmi_indicators.items():
+                value = data.get(data_key)
+                if value is not None:
+                    # Check and delete existing record
+                    existing_record = self.repo.find_by_type_and_date(indicator_type, current_date)
+                    if existing_record:
+                        self.repo.delete(existing_record)
+                        logger.debug("Deleted existing %s record for date %s", indicator_name, current_date.strftime('%Y-%m-%d'))
+                    
+                    # Save new record
+                    self.repo.create(
+                        type=indicator_type,
+                        indicator_name=indicator_name,
+                        value=float(value),
+                        date_time=current_date,
+                        is_leading_indicator=False
+                    )
+                    saved_count += 1
+            
+            logger.info("Saved %d PMI indicator records to database", saved_count)
+        except Exception as e:
+            logger.error("Error saving PMI indicators to database: %s", str(e))
             self.repo.session.rollback()
             raise
         finally:
