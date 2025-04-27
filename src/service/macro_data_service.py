@@ -64,10 +64,11 @@ class MacroDataService:
                     # Save new record
                     self.repo.create(
                         type=indicator_type,
-                        indicator_name=indicator_name,
+                        name=indicator_name,
                         value=value,
                         date_time=date,
-                        is_leading_indicator=True
+                        is_leading_indicator=True,
+                        region="US"
                     )
                     saved_count += 1
                 
@@ -86,10 +87,11 @@ class MacroDataService:
                     # Save new record
                     self.repo.create(
                         type=indicator_type,
-                        indicator_name=indicator_name,
+                        name=indicator_name,
                         value=value,
                         date_time=date,
-                        is_leading_indicator=True
+                        is_leading_indicator=True,
+                        region="US"
                     )
                     saved_count += 1
             
@@ -172,10 +174,11 @@ class MacroDataService:
                     # Save new record
                     self.repo.create(
                         type=indicator_type,
-                        indicator_name=indicator_name,
+                        name=indicator_name,
                         value=float(value),
                         date_time=current_date,
-                        is_leading_indicator=False
+                        is_leading_indicator=False,
+                        region="US"
                     )
                     saved_count += 1
             
@@ -241,10 +244,11 @@ class MacroDataService:
                     # Save new record
                     self.repo.create(
                         type=indicator_type,
-                        indicator_name=indicator_name,
+                        name=indicator_name,
                         value=float(value),
                         date_time=current_date,
-                        is_leading_indicator=False
+                        is_leading_indicator=False,
+                        region="US"
                     )
                     saved_count += 1
             
@@ -308,10 +312,11 @@ class MacroDataService:
                     # Save new record
                     self.repo.create(
                         type=indicator_type,
-                        indicator_name=indicator_name,
+                        name=indicator_name,
                         value=float(value),
                         date_time=current_date,
-                        is_leading_indicator=False
+                        is_leading_indicator=False,
+                        region="US"
                     )
                     saved_count += 1
             
@@ -377,10 +382,11 @@ class MacroDataService:
                     # Save new record
                     self.repo.create(
                         type=indicator_type,
-                        indicator_name=indicator_name,
+                        name=indicator_name,
                         value=float(value),
                         date_time=current_date,
-                        is_leading_indicator=False
+                        is_leading_indicator=False,
+                        region="US"
                     )
                     saved_count += 1
             
@@ -444,10 +450,11 @@ class MacroDataService:
                     # Save new record
                     self.repo.create(
                         type=indicator_type,
-                        indicator_name=indicator_name,
+                        name=indicator_name,
                         value=float(value),
                         date_time=current_date,
-                        is_leading_indicator=False
+                        is_leading_indicator=False,
+                        region="US"
                     )
                     saved_count += 1
             

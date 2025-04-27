@@ -12,8 +12,9 @@ class MacroIndicator(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     type = Column(String(100), nullable=False)
-    indicator_name = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=False)
     value = Column(Float, nullable=False)
     date_time = Column(DateTime, nullable=False)
     is_leading_indicator = Column(Boolean, default=False)
+    region = Column(String(50), nullable=False, default="US")
     creation_data_time = Column(DateTime, default=datetime.utcnow) 

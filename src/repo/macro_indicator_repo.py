@@ -15,29 +15,32 @@ class MacroIndicatorRepository:
     
     def create(self, 
                type: str, 
-               indicator_name: str, 
+               name: str, 
                value: float, 
                date_time: datetime,
-               is_leading_indicator: bool = False) -> MacroIndicator:
+               is_leading_indicator: bool = False,
+               region: str = "US") -> MacroIndicator:
         """
         Create a new macro indicator record.
         
         Args:
             type: The type of indicator
-            indicator_name: The name of the indicator
+            name: The name of the indicator
             value: The indicator value
             date_time: The datetime of the indicator value
             is_leading_indicator: Whether this is a leading indicator
+            region: The region of the indicator
             
         Returns:
             The created MacroIndicator instance
         """
         indicator = MacroIndicator(
             type=type,
-            indicator_name=indicator_name,
+            name=name,
             value=value,
             date_time=date_time,
             is_leading_indicator=is_leading_indicator,
+            region=region,
             creation_data_time=datetime.utcnow()
         )
         
@@ -90,7 +93,7 @@ class MacroIndicatorRepository:
         Returns:
             List of matching MacroIndicator instances
         """
-        return self.session.query(MacroIndicator).filter(MacroIndicator.indicator_name == name).all()
+        return self.session.query(MacroIndicator).filter(MacroIndicator.name == name).all()
     
     def find_by_type_and_date(self, indicator_type: str, date_time: date) -> Optional[MacroIndicator]:
         """
