@@ -1,6 +1,7 @@
 from datetime import datetime, date
-from typing import List, Optional
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from repository.model.macro_indicator import MacroIndicator
 from repository.database_base import get_db_session
@@ -50,51 +51,6 @@ class MacroIndicatorRepository:
         
         return indicator
     
-    def get_by_id(self, indicator_id: int) -> Optional[MacroIndicator]:
-        """
-        Get a macro indicator by ID.
-        
-        Args:
-            indicator_id: The ID of the indicator
-            
-        Returns:
-            The MacroIndicator instance or None if not found
-        """
-        return self.session.query(MacroIndicator).filter(MacroIndicator.id == indicator_id).first()
-    
-    def get_all(self) -> List[MacroIndicator]:
-        """
-        Get all macro indicators.
-        
-        Returns:
-            List of all MacroIndicator instances
-        """
-        return self.session.query(MacroIndicator).all()
-    
-    def get_by_type(self, indicator_type: str) -> List[MacroIndicator]:
-        """
-        Get all macro indicators of a specific type.
-        
-        Args:
-            indicator_type: The type of indicators to retrieve
-            
-        Returns:
-            List of matching MacroIndicator instances
-        """
-        return self.session.query(MacroIndicator).filter(MacroIndicator.type == indicator_type).all()
-    
-    def get_by_name(self, name: str) -> List[MacroIndicator]:
-        """
-        Get all macro indicators with a specific name.
-        
-        Args:
-            name: The name of indicators to retrieve
-            
-        Returns:
-            List of matching MacroIndicator instances
-        """
-        return self.session.query(MacroIndicator).filter(MacroIndicator.name == name).all()
-    
     def find_by_type_and_date(self, indicator_type: str, date_time: date) -> Optional[MacroIndicator]:
         """
         Find a macro indicator by its type and date.
@@ -115,28 +71,6 @@ class MacroIndicatorRepository:
             .filter(MacroIndicator.date_time >= start_of_day)\
             .filter(MacroIndicator.date_time <= end_of_day)\
             .first()
-    
-    def update(self, indicator_id: int, **kwargs) -> Optional[MacroIndicator]:
-        """
-        Update a macro indicator by ID.
-        
-        Args:
-            indicator_id: The ID of the indicator to update
-            **kwargs: Fields to update
-            
-        Returns:
-            The updated MacroIndicator instance or None if not found
-        """
-        indicator = self.get_by_id(indicator_id)
-        if indicator:
-            for key, value in kwargs.items():
-                if hasattr(indicator, key):
-                    setattr(indicator, key, value)
-            
-            self.session.commit()
-            self.session.refresh(indicator)
-        
-        return indicator
     
     def delete(self, indicator: MacroIndicator) -> bool:
         """
@@ -160,4 +94,35 @@ class MacroIndicatorRepository:
         
     def close(self):
         """Close the database session."""
-        self.session.close() 
+        self.session.close()
+
+    def get_latest_by_region(self, region: str = "US") -> Dict[str, MacroIndicator]:
+        """
+        Get the latest indicators for a specific region.
+        
+        Args:
+            region: The region to filter indicators by (default: "US")
+            
+        Returns:
+            Dict[str, MacroIndicator]: Dictionary mapping indicator type to its latest record
+        """
+        # Subquery to get the latest date for each indicator type
+        latest_dates = self.session.query(
+            MacroIndicator.type,
+            func.max(MacroIndicator.date_time).label('max_date')
+        ).filter(
+            MacroIndicator.region == region
+        ).group_by(
+            MacroIndicator.type
+        ).subquery()
+        
+        # Query to get the latest indicators
+        latest_indicators = self.session.query(MacroIndicator).join(
+            latest_dates,
+            (MacroIndicator.type == latest_dates.c.type) &
+            (MacroIndicator.date_time == latest_dates.c.max_date) &
+            (MacroIndicator.region == region)
+        ).all()
+        
+        # Convert to dictionary with type as key
+        return {indicator.type: indicator for indicator in latest_indicators} 

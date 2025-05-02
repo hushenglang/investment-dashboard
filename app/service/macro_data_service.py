@@ -102,29 +102,25 @@ class MacroDataService:
         finally:
             self.repo.close()
     
-    def get_latest_indicators(self):
+    def get_all_us_latest_indicators(self):
         """
-        Retrieve the latest indicators from the database.
+        Retrieve all US latest indicators from the database.
         
         Returns:
-            Dictionary containing the latest indicator values
+            Dictionary containing the latest indicator values where keys are indicator types
+            and values are MacroIndicator objects
         """
         try:
-            us_indicators = self.repo.get_by_name("US_LEADING_INDEX")
-            bbk_indicators = self.repo.get_by_name("BBK_LEADING_INDEX")
-            
-            latest_data = {
-                "US_LEADING_INDEX": max(us_indicators, key=lambda x: x.date_time).value if us_indicators else None,
-                "BBK_LEADING_INDEX": max(bbk_indicators, key=lambda x: x.date_time).value if bbk_indicators else None
-            }
-            
-            return latest_data
+            logger.info("Retrieving latest US indicators from database")
+            latest_indicators = self.repo.get_latest_by_region(region="US")
+            logger.info("Successfully retrieved %d latest US indicators", len(latest_indicators))
+            return latest_indicators
         except Exception as e:
-            logger.error("Error retrieving latest indicators: %s", str(e))
+            logger.error("Error retrieving latest US indicators: %s", str(e))
             raise
         finally:
             self.repo.close()
-
+    
     def fetch_and_store_treasury_data(self):
         """
         Fetch treasury yields and spreads from FRED and store them in the database.
