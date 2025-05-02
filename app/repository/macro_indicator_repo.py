@@ -2,8 +2,8 @@ from datetime import datetime, date
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
-from repo.model.models import MacroIndicator
-from repo.database import get_db_session
+from repository.model.macro_indicator import MacroIndicator
+from repository.database_base import get_db_session
 
 class MacroIndicatorRepository:
     """

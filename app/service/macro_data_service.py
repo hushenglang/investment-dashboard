@@ -1,11 +1,10 @@
 import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, Optional
-
 from client.fred_macro_data_client import FredMacroDataClient
 from client.trading_economics_client import TradingEconomicsClient
 from client.yahoo_finance_client import YahooFinanceClient
-from repo.macro_indicator_repo import MacroIndicatorRepository
+from repository.macro_indicator_repo import MacroIndicatorRepository
 from config.logging_config import get_logger
 
 logger = get_logger(__name__)

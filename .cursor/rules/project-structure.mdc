@@ -1,0 +1,51 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Project Directory Structure
+
+The project follows a clean, modular structure:
+
+```
+investment-dashboard/
+├── app/                    # Main application directory
+│   ├── scheduler/         # Core scheduler components
+│   │   ├── __init__.py
+│   │   ├── scheduler.py   # Main scheduler implementation
+│   │   ├── tasks.py       # Task definitions
+│   │   └── utils.py       # Utility functions
+│   ├── api/              # API endpoints
+│   │   ├── __init__.py
+│   │   └── routes.py     # API route definitions
+│   └── models/           # Data models
+│       ├── __init__.py
+│       └── task_model.py # Task data models
+├── config/               # Configuration files
+│   ├── __init__.py
+│   └── settings.py      # Application settings
+├── tests/               # Test suite
+│   ├── __init__.py
+│   └── test_scheduler.py
+├── requirements.txt     # Project dependencies
+└── README.md           # Project documentation
+```
+
+## Key Components
+
+1. **scheduler/**: Contains the core scheduling logic
+   - `scheduler.py`: Main scheduler engine
+   - `tasks.py`: Task definitions and handlers
+   - `utils.py`: Helper functions and utilities
+
+2. **api/**: REST API implementation
+   - `routes.py`: API endpoint definitions
+
+3. **models/**: Data models and database schemas
+   - `task_model.py`: Task-related data structures
+
+4. **config/**: Configuration management
+   - `settings.py`: Application settings and constants
+
+5. **tests/**: Test suite
+   - Unit tests and integration tests for the scheduler

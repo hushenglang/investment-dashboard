@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 from config.db_config import DATABASE_URL
-from repo.model.models import Base
+from repository.model.macro_indicator import Base
 
 # Register PyMySQL with SQLAlchemy
 pymysql.install_as_MySQLdb()

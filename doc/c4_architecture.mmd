@@ -1,0 +1,33 @@
+graph TB
+    %% System Context Level
+    subgraph "Investment Dashboard System"
+        %% Containers
+        subgraph "Indicator Loader"
+            IL[Indicator Loader Service]
+        end
+
+        subgraph "Investment Dashboard UI"
+            UI[Web Interface]
+        end
+
+        subgraph "Investment Dashboard API"
+            API[REST API Service]
+        end
+
+        subgraph "Database"
+            DB[(MySQL Database)]
+        end
+
+        %% Relationships
+        IL -->|Store Indicators| DB
+        UI -->|Fetch Data| API
+        API -->|Query Data| DB
+    end
+
+    %% External Actors
+    Users((Users))
+    ExternalData((External Data Sources))
+
+    %% External Relationships
+    Users -->|View Dashboard| UI
+    IL -->|Fetch Data| ExternalData 
