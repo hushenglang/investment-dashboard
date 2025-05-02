@@ -1,0 +1,120 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Testing Guidelines
+
+This document outlines the testing standards and practices for the Investment Dashboard project.
+
+## Test Organization
+
+1. **Directory Structure**
+   - Unit tests: [tests/unit/](mdc:tests/unit)
+   - Integration tests: [tests/integration/](mdc:tests/integration)
+   - Test fixtures: [tests/fixtures/](mdc:tests/fixtures)
+   - Test utilities: [tests/utils/](mdc:tests/utils)
+
+2. **Test File Naming**
+   - Test files should mirror the structure of the source code
+   - Prefix test files with `test_`
+   - Example: `app/service/portfolio.py` → `tests/unit/service/test_portfolio.py`
+
+## Test Categories
+
+1. **Unit Tests**
+   - Test individual components in isolation
+   - Mock external dependencies
+   - Focus on business logic
+   - Example location: [tests/unit/service/test_macro_data_service.py](mdc:tests/unit/service/test_macro_data_service.py)
+
+2. **Integration Tests**
+   - Test component interactions
+   - Test database operations
+   - Test external API integrations
+   - Example location: [tests/integration/test_portfolio_workflow.py](mdc:tests/integration/test_portfolio_workflow.py)
+
+3. **End-to-End Tests**
+   - Test complete workflows
+   - Minimal mocking
+   - Focus on user scenarios
+
+## Testing Best Practices
+
+1. **Test Structure**
+   - Use descriptive test names
+   - Follow Arrange-Act-Assert pattern
+   - Group related tests in classes
+   - Example:
+     ```python
+     class TestPortfolioValuation:
+         def test_calculate_total_value(self):
+             # Arrange
+             portfolio = create_test_portfolio()
+             
+             # Act
+             total_value = portfolio.calculate_total_value()
+             
+             # Assert
+             assert total_value == expected_value
+     ```
+
+2. **Fixtures and Factories**
+   - Use pytest fixtures for common setup
+   - Create test data factories
+   - Keep fixtures focused and minimal
+   - Example:
+     ```python
+     @pytest.fixture
+     def sample_portfolio():
+         return Portfolio(
+             id="test-portfolio",
+             holdings=[
+                 Asset(symbol="AAPL", quantity=100),
+                 Asset(symbol="GOOGL", quantity=50)
+             ]
+         )
+     ```
+
+3. **Mocking**
+   - Use `pytest-mock` for mocking
+   - Mock at the lowest level possible
+   - Document mock behavior
+   - Example:
+     ```python
+     def test_fetch_market_data(mocker):
+         mock_client = mocker.patch("app.client.market_data.MarketDataClient")
+         mock_client.get_price.return_value = 150.0
+     ```
+
+4. **Test Coverage**
+   - Aim for high test coverage
+   - Focus on critical paths
+   - Run coverage reports:
+     ```bash
+     pytest --cov=app --cov-report=html
+     ```
+
+5. **Error Cases**
+   - Test error handling
+   - Test edge cases
+   - Test invalid inputs
+   - Example:
+     ```python
+     def test_portfolio_validation_with_invalid_data():
+         with pytest.raises(ValueError) as exc_info:
+             Portfolio(holdings=[Asset(symbol="", quantity=-1)])
+         assert "Invalid quantity" in str(exc_info.value)
+     ```
+
+## Running Tests
+
+1. **Local Development**
+   - Run all tests: `pytest`
+   - Run specific test file: `pytest tests/unit/test_file.py`
+   - Run specific test: `pytest tests/unit/test_file.py::TestClass::test_name`
+
+2. **CI/CD Pipeline**
+   - Tests run automatically on pull requests
+   - Coverage reports generated
+   - Test results published to CI dashboard

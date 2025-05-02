@@ -1,0 +1,56 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Development Setup Guide
+
+This document outlines the development environment setup and common development tasks for the Investment Dashboard project.
+
+## Environment Setup
+
+1. **Python Environment**
+   - Python 3.12+ is required
+   - Use [pyproject.toml](mdc:pyproject.toml) for project configuration
+   - Virtual environment management with `uv`:
+     ```bash
+     uv venv .venv --python=3.12
+     source .venv/bin/activate
+     ```
+
+2. **Dependencies**
+   - Install project dependencies:
+     ```bash
+     uv pip install -e .
+     ```
+   - Development dependencies are specified in [requirements.txt](mdc:requirements.txt)
+
+## Development Tools
+
+1. **Code Quality**
+   - Ruff for linting and formatting
+   - MyPy for static type checking
+   - Pre-commit hooks for code quality checks
+
+2. **Testing**
+   - Pytest for running tests
+   - Coverage reports for test coverage analysis
+
+## Common Tasks
+
+1. **Running the Application**
+   - Main entry point: [app/main.py](mdc:app/main.py)
+   - Development server: `python -m app.main`
+
+2. **Database**
+   - Configuration in [app/config/db_config.py](mdc:app/config/db_config.py)
+   - Run migrations before starting the application
+
+3. **Testing**
+   - Run all tests: `pytest`
+   - Run with coverage: `pytest --cov=app`
+
+4. **Code Quality**
+   - Format code: `ruff format .`
+   - Run linter: `ruff check .`
+   - Type checking: `mypy .`

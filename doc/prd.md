@@ -13,17 +13,22 @@
 
 ## Economic Indicators
 ### US Economic Indicators
-| Indicator Name | Description |
-|------------------------------------|-------------------------------------------------------------------------------------------------|
-| leading_index_us | US Leading Index (USALOLITOAASTSAM) |
-| consumer_credit | Total Consumer Credit (TOTALSL) |
-| consumer_sentiment | University of Michigan Consumer Sentiment (UMCSENT) |
-| disposable_income | Real Disposable Personal Income (DSPIC96) |
-| national_financial_conditions | Chicago Fed National Financial Conditions Index (NFCI) |
-| adjusted_financial_conditions | Chicago Fed Adjusted National Financial Conditions Index (ANFCI) |
-| manufacturing_pmi | United States ISM Manufacturing PMI |
-| services_pmi | United States ISM Services PMI |
-| composite_pmi | United States Composite PMI |
+| Category | Indicator | Why It Matters |
+|----------|-----------|----------------|
+| Leading Economic Index | US Leading Index (USALOLITOAASTSAM) | Predicts future economic trends and potential turning points in the economy |
+| Consumer Metrics | Total Consumer Credit (TOTALSL) | Shows consumer borrowing trends and financial health |
+| Consumer Metrics | University of Michigan Consumer Sentiment (UMCSENT) | Measures consumer confidence and potential future spending |
+| Consumer Metrics | Real Disposable Personal Income (DSPIC96) | Indicates consumers' purchasing power and potential spending |
+| Financial Conditions | Chicago Fed National Financial Conditions Index (NFCI) | Measures overall financial system stability |
+| Financial Conditions | Chicago Fed Adjusted National Financial Conditions Index (ANFCI) | Risk-adjusted measure of financial system stability |
+| Manufacturing & Services | ISM Manufacturing PMI | Indicates expansion/contraction in manufacturing sector (>50 expansion, <50 contraction) |
+| Manufacturing & Services | ISM Services PMI | Shows growth/decline in services sector |
+| Manufacturing & Services | Composite PMI | Combined measure of both manufacturing and services sector performance |
+| Treasury Yields | 3-Month Treasury Yield (DGS3MO) | Short-term government borrowing cost |
+| Treasury Yields | 2-Year Treasury Yield (DGS2) | Medium-term interest rate expectations |
+| Treasury Yields | 10-Year Treasury Yield (DGS10) | Long-term interest rate benchmark |
+| Yield Spreads | 10Y-2Y Spread | Key recession indicator (negative spread often precedes recessions) |
+| Yield Spreads | 10Y-3M Spread | Alternative recession indicator with shorter-term comparison |
 
 ### China Economic Indicators
 | **Category**          | **Indicator**                          | **Why It Matters**                                                                 |

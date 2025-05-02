@@ -1,0 +1,99 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Code Style Guide
+
+This document outlines the coding standards and style guidelines for the Investment Dashboard project.
+
+## Python Style Guidelines
+
+1. **Code Formatting**
+   - Follow PEP 8 style guide
+   - Use Ruff for automatic formatting
+   - Maximum line length: 88 characters (Black-compatible)
+   - Use 4 spaces for indentation
+
+2. **Naming Conventions**
+   - Classes: PascalCase (e.g., `InvestmentPortfolio`)
+   - Functions/Methods: snake_case (e.g., `calculate_returns`)
+   - Variables: snake_case (e.g., `total_value`)
+   - Constants: UPPER_SNAKE_CASE (e.g., `MAX_RETRY_COUNT`)
+   - Private attributes/methods: prefix with underscore (e.g., `_internal_method`)
+
+3. **Type Hints**
+   - Use type hints for all function parameters and return values
+   - Import types from `typing` module
+   - Use `Optional` for nullable values
+   - Example:
+     ```python
+     from typing import Optional, List
+     
+     def get_portfolio_value(portfolio_id: str) -> Optional[float]:
+         ...
+     ```
+
+4. **Documentation**
+   - Use docstrings for modules, classes, and functions
+   - Follow Google docstring format
+   - Document parameters, return values, and exceptions
+   - Example:
+     ```python
+     def calculate_returns(
+         initial_value: float,
+         final_value: float
+     ) -> float:
+         """Calculate percentage returns between two values.
+         
+         Args:
+             initial_value: Starting portfolio value
+             final_value: Ending portfolio value
+             
+         Returns:
+             float: Percentage return
+             
+         Raises:
+             ValueError: If initial_value is zero or negative
+         """
+         ...
+     ```
+
+5. **Imports**
+   - Group imports in the following order:
+     1. Standard library imports
+     2. Third-party imports
+     3. Local application imports
+   - Use absolute imports within the project
+   - Sort imports alphabetically within each group
+
+6. **Error Handling**
+   - Use specific exception types
+   - Always include error messages
+   - Log exceptions appropriately
+   - Example:
+     ```python
+     try:
+         result = process_data()
+     except ValueError as e:
+         logger.error("Invalid data format: %s", str(e))
+         raise
+     ```
+
+7. **Testing**
+   - Write test names that describe the scenario
+   - Use descriptive assertion messages
+   - Follow Arrange-Act-Assert pattern
+   - Example:
+     ```python
+     def test_portfolio_returns_calculation_with_valid_values():
+         # Arrange
+         initial = 1000.0
+         final = 1100.0
+         
+         # Act
+         result = calculate_returns(initial, final)
+         
+         # Assert
+         assert result == 10.0, "Expected 10% return for 1000 to 1100"
+     ```
