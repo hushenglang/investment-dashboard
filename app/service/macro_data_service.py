@@ -114,7 +114,18 @@ class MacroDataService:
             logger.info("Retrieving latest US indicators from database")
             latest_indicators = self.repo.get_latest_by_region(region="US")
             logger.info("Successfully retrieved %d latest US indicators", len(latest_indicators))
-            return latest_indicators
+            latest_indicators_dict = {  
+                indicator.type: {
+                    "type": indicator.type,
+                    "name": indicator.name,
+                    "value": indicator.value,
+                    "date_time": indicator.date_time,
+                    "is_leading_indicator": indicator.is_leading_indicator,
+                    "region": indicator.region
+                }
+                for indicator in latest_indicators.values()
+            }
+            return latest_indicators_dict
         except Exception as e:
             logger.error("Error retrieving latest US indicators: %s", str(e))
             raise
@@ -133,7 +144,18 @@ class MacroDataService:
             logger.info("Retrieving latest China indicators from database")
             latest_indicators = self.repo.get_latest_by_region(region="CHINA")
             logger.info("Successfully retrieved %d latest China indicators", len(latest_indicators))
-            return latest_indicators
+            latest_indicators_dict = {  
+                indicator.type: {
+                    "type": indicator.type,
+                    "name": indicator.name,
+                    "value": indicator.value,
+                    "date_time": indicator.date_time,
+                    "is_leading_indicator": indicator.is_leading_indicator,
+                    "region": indicator.region
+                }
+                for indicator in latest_indicators.values()
+            }
+            return latest_indicators_dict
         except Exception as e:
             logger.error("Error retrieving latest China indicators: %s", str(e))
             raise
