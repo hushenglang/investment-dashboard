@@ -2,7 +2,6 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 from client.fred_macro_data_client import FredMacroDataClient
-from client.trading_economics_client import TradingEconomicsClient
 from client.yahoo_finance_client import YahooFinanceClient
 from repository.macro_indicator_repo import MacroIndicatorRepository
 from config.logging_config import get_logger
@@ -15,7 +14,6 @@ class MacroDataService:
     def __init__(self):
         """Initialize the MacroDataService with FRED client and repository."""
         self.fred_client = FredMacroDataClient()
-        self.trading_economics_client = TradingEconomicsClient()
         self.yahoo_finance_client = YahooFinanceClient()
         self.repo = MacroIndicatorRepository()
         logger.info("MacroDataService initialized")
@@ -546,28 +544,6 @@ class MacroDataService:
             return True
         except Exception as e:
             logger.error("Error in fetch_and_store_financial_condition_indices_by_date_range: %s", str(e))
-            raise
-
-    def fetch_and_store_pmi_indicators_by_date_range(self, start_date: datetime, end_date: datetime):
-        """
-        Fetch PMI indicators from Trading Economics and store them in the database for a specific date range.
-        
-        Args:
-            start_date (datetime): Start date of the range (inclusive)
-            end_date (datetime): End date of the range (inclusive)
-            
-        Returns:
-            bool: True if operation was successful
-        """
-        try:
-            logger.info("Fetching PMI indicators from Trading Economics for period %s to %s", 
-                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
-            pmi_data = self.trading_economics_client.get_pmi_indicators(start_date, end_date)
-            self._save_pmi_indicators_to_db(pmi_data)
-            logger.info("Successfully fetched and stored PMI indicators")
-            return True
-        except Exception as e:
-            logger.error("Error in fetch_and_store_pmi_indicators_by_date_range: %s", str(e))
             raise
 
     def fetch_and_store_commodity_prices_by_date_range(self, start_date: datetime, end_date: datetime):
