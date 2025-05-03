@@ -19,23 +19,96 @@ class MacroDataService:
         self.yahoo_finance_client = YahooFinanceClient()
         self.repo = MacroIndicatorRepository()
         logger.info("MacroDataService initialized")
-    
-    def fetch_and_store_leading_indicators(self):
+
+    def get_all_us_indicators(self, start_date: datetime, end_date: datetime):
         """
-        Fetch indicators from FRED and store them in the database.
+        Retrieve all US indicators within a specified date range from the database.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+        
+        Returns:
+            Dictionary containing the indicator values where keys are indicator types
+            and values are dictionaries with indicator details
         """
         try:
-            logger.info("Fetching indicators from FRED")
-            start_date = datetime.now() - timedelta(days=180)
-            end_date = datetime.now()
-            combined_data = self.fred_client.get_leading_indicators(start_date, end_date)
-            self._save_leading_indicators_to_db(combined_data)
-            logger.info("Successfully fetched and stored indicators")
-            return True
+            logger.info("Retrieving US indicators from database for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            indicators = self.repo.find_by_region_date_range(
+                start_date=start_date,
+                end_date=end_date,
+                region="US"
+            )
+            logger.info("Successfully retrieved %d US indicators", len(indicators))
+            indicators_dict = {  
+                indicator.type: {
+                    "type": indicator.type,
+                    "name": indicator.name,
+                    "value": indicator.value,
+                    "date_time": indicator.date_time,
+                    "is_leading_indicator": indicator.is_leading_indicator,
+                    "region": indicator.region
+                }
+                for indicator in indicators
+            }
+            return indicators_dict
         except Exception as e:
-            logger.error("Error in fetch_and_store_indicators: %s", str(e))
+            logger.error("Error retrieving US indicators: %s", str(e))
             raise
+        finally:
+            self.repo.close()
+
+    def get_all_china_indicators(self, start_date: datetime, end_date: datetime):
+        """
+        Retrieve all China indicators within a specified date range from the database.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+        
+        Returns:
+            Dictionary containing the indicator values where keys are indicator types
+            and values are dictionaries with indicator details
+        """
+        try:
+            logger.info("Retrieving China indicators from database for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            indicators = self.repo.find_by_region_date_range(
+                start_date=start_date,
+                end_date=end_date,
+                region="CHINA"
+            )
+            logger.info("Successfully retrieved %d China indicators", len(indicators))
+            indicators_dict = {  
+                indicator.type: {
+                    "type": indicator.type,
+                    "name": indicator.name,
+                    "value": indicator.value,
+                    "date_time": indicator.date_time,
+                    "is_leading_indicator": indicator.is_leading_indicator,
+                    "region": indicator.region
+                }
+                for indicator in indicators
+            }
+            return indicators_dict
+        except Exception as e:
+            logger.error("Error retrieving China indicators: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
     
+    def fetch_and_store_leading_indicators(self, default_days: int = 180):
+        """
+        Fetch indicators from FRED and store them in the database.
+        
+        Args:
+            default_days (int): Number of days to look back for data (default: 180)
+        """
+        start_date = datetime.now() - timedelta(days=default_days)
+        end_date = datetime.now()
+        return self.fetch_and_store_leading_indicators_by_date_range(start_date, end_date)
+
     def _save_leading_indicators_to_db(self, data: pd.DataFrame):
         """
         Save the fetched indicators to the database.
@@ -102,82 +175,17 @@ class MacroDataService:
         finally:
             self.repo.close()
     
-    def get_all_us_latest_indicators(self):
-        """
-        Retrieve all US latest indicators from the database.
-        
-        Returns:
-            Dictionary containing the latest indicator values where keys are indicator types
-            and values are MacroIndicator objects
-        """
-        try:
-            logger.info("Retrieving latest US indicators from database")
-            latest_indicators = self.repo.get_latest_by_region(region="US")
-            logger.info("Successfully retrieved %d latest US indicators", len(latest_indicators))
-            latest_indicators_dict = {  
-                indicator.type: {
-                    "type": indicator.type,
-                    "name": indicator.name,
-                    "value": indicator.value,
-                    "date_time": indicator.date_time,
-                    "is_leading_indicator": indicator.is_leading_indicator,
-                    "region": indicator.region
-                }
-                for indicator in latest_indicators.values()
-            }
-            return latest_indicators_dict
-        except Exception as e:
-            logger.error("Error retrieving latest US indicators: %s", str(e))
-            raise
-        finally:
-            self.repo.close()
-    
-    def get_all_china_latest_indicators(self):
-        """
-        Retrieve all China latest indicators from the database.
-        
-        Returns:
-            Dictionary containing the latest indicator values where keys are indicator types
-            and values are MacroIndicator objects
-        """
-        try:
-            logger.info("Retrieving latest China indicators from database")
-            latest_indicators = self.repo.get_latest_by_region(region="CHINA")
-            logger.info("Successfully retrieved %d latest China indicators", len(latest_indicators))
-            latest_indicators_dict = {  
-                indicator.type: {
-                    "type": indicator.type,
-                    "name": indicator.name,
-                    "value": indicator.value,
-                    "date_time": indicator.date_time,
-                    "is_leading_indicator": indicator.is_leading_indicator,
-                    "region": indicator.region
-                }
-                for indicator in latest_indicators.values()
-            }
-            return latest_indicators_dict
-        except Exception as e:
-            logger.error("Error retrieving latest China indicators: %s", str(e))
-            raise
-        finally:
-            self.repo.close()
-    
-    def fetch_and_store_treasury_data(self):
+    def fetch_and_store_treasury_data(self, default_days: int = 180):
         """
         Fetch treasury yields and spreads from FRED and store them in the database.
+        
+        Args:
+            default_days (int): Number of days to look back for data (default: 180)
         """
-        try:
-            logger.info("Fetching treasury data from FRED")
-            start_date = datetime.now() - timedelta(days=180)
-            end_date = datetime.now()
-            treasury_data = self.fred_client.get_treasury_yields_and_spreads(start_date, end_date)
-            self._save_treasury_data_to_db(treasury_data)
-            logger.info("Successfully fetched and stored treasury data")
-            return True
-        except Exception as e:
-            logger.error("Error in fetch_and_store_treasury_data: %s", str(e))
-            raise
-    
+        start_date = datetime.now() - timedelta(days=default_days)
+        end_date = datetime.now()
+        return self.fetch_and_store_treasury_data_by_date_range(start_date, end_date)
+
     def _save_treasury_data_to_db(self, data: Dict[str, Optional[float]]):
         """
         Save the fetched treasury data to the database.
@@ -226,29 +234,16 @@ class MacroDataService:
         finally:
             self.repo.close()
 
-    def fetch_and_store_consumer_indices(self):
+    def fetch_and_store_consumer_indices(self, default_days: int = 180):
         """
         Fetch consumer-related indices from FRED and store them in the database.
         
-        This method fetches the latest values for:
-        - Consumer credit (TOTALSL)
-        - Consumer sentiment (UMCSENT)
-        - Disposable income (DSPIC96)
-        
-        Returns:
-            bool: True if operation was successful
+        Args:
+            default_days (int): Number of days to look back for data (default: 180)
         """
-        try:
-            logger.info("Fetching consumer indices from FRED")
-            start_date = datetime.now() - timedelta(days=180)
-            end_date = datetime.now()
-            consumer_data = self.fred_client.get_consumer_indices(start_date, end_date)
-            self._save_consumer_indices_to_db(consumer_data)
-            logger.info("Successfully fetched and stored consumer indices")
-            return True
-        except Exception as e:
-            logger.error("Error in fetch_and_store_consumer_indices: %s", str(e))
-            raise
+        start_date = datetime.now() - timedelta(days=default_days)
+        end_date = datetime.now()
+        return self.fetch_and_store_consumer_indices_by_date_range(start_date, end_date)
     
     def _save_consumer_indices_to_db(self, data: Dict[str, Optional[float]]):
         """
@@ -296,28 +291,16 @@ class MacroDataService:
         finally:
             self.repo.close()
 
-    def fetch_and_store_financial_condition_indices(self):
+    def fetch_and_store_financial_condition_indices(self, default_days: int = 180):
         """
         Fetch financial condition indices from FRED and store them in the database.
         
-        This method fetches the latest values for:
-        - National Financial Conditions Index (NFCI)
-        - Adjusted National Financial Conditions Index (ANFCI)
-        
-        Returns:
-            bool: True if operation was successful
+        Args:
+            default_days (int): Number of days to look back for data (default: 180)
         """
-        try:
-            logger.info("Fetching financial condition indices from FRED")
-            start_date = datetime.now() - timedelta(days=180)
-            end_date = datetime.now()
-            financial_data = self.fred_client.get_financial_condition_indices(start_date, end_date)
-            self._save_financial_condition_indices_to_db(financial_data)
-            logger.info("Successfully fetched and stored financial condition indices")
-            return True
-        except Exception as e:
-            logger.error("Error in fetch_and_store_financial_condition_indices: %s", str(e))
-            raise
+        start_date = datetime.now() - timedelta(days=default_days)
+        end_date = datetime.now()
+        return self.fetch_and_store_financial_condition_indices_by_date_range(start_date, end_date)
     
     def _save_financial_condition_indices_to_db(self, data: Dict[str, Optional[float]]):
         """
@@ -364,29 +347,16 @@ class MacroDataService:
         finally:
             self.repo.close()
 
-    def fetch_and_store_pmi_indicators(self):
+    def fetch_and_store_pmi_indicators(self, default_days: int = 180):
         """
         Fetch PMI indicators from Trading Economics and store them in the database.
         
-        This method fetches the latest values for:
-        - ISM Manufacturing PMI
-        - ISM Services PMI
-        - Composite PMI
-        
-        Returns:
-            bool: True if operation was successful
+        Args:
+            default_days (int): Number of days to look back for data (default: 180)
         """
-        try:
-            logger.info("Fetching PMI indicators from Trading Economics")
-            start_date = datetime.now() - timedelta(days=180)
-            end_date = datetime.now()
-            pmi_data = self.trading_economics_client.get_pmi_indicators(start_date, end_date)
-            self._save_pmi_indicators_to_db(pmi_data)
-            logger.info("Successfully fetched and stored PMI indicators")
-            return True
-        except Exception as e:
-            logger.error("Error in fetch_and_store_pmi_indicators: %s", str(e))
-            raise
+        start_date = datetime.now() - timedelta(days=default_days)
+        end_date = datetime.now()
+        return self.fetch_and_store_pmi_indicators_by_date_range(start_date, end_date)
     
     def _save_pmi_indicators_to_db(self, data: Dict[str, Optional[float]]):
         """
@@ -434,28 +404,16 @@ class MacroDataService:
         finally:
             self.repo.close()
 
-    def fetch_and_store_commodity_prices(self):
+    def fetch_and_store_commodity_prices(self, default_days: int = 180):
         """
         Fetch commodity prices from Yahoo Finance and store them in the database.
         
-        This method fetches the latest values for:
-        - Crude Oil Futures
-        - Gold Futures
-        
-        Returns:
-            bool: True if operation was successful
+        Args:
+            default_days (int): Number of days to look back for data (default: 180)
         """
-        try:
-            logger.info("Fetching commodity prices from Yahoo Finance")
-            start_date = datetime.now() - timedelta(days=7)
-            end_date = datetime.now()
-            commodity_data = self.yahoo_finance_client.get_commodity_prices(start_date, end_date)
-            self._save_commodity_prices_to_db(commodity_data)
-            logger.info("Successfully fetched and stored commodity prices")
-            return True
-        except Exception as e:
-            logger.error("Error in fetch_and_store_commodity_prices: %s", str(e))
-            raise
+        start_date = datetime.now() - timedelta(days=default_days)
+        end_date = datetime.now()
+        return self.fetch_and_store_commodity_prices_by_date_range(start_date, end_date)
     
     def _save_commodity_prices_to_db(self, data: Dict[str, Optional[float]]):
         """
@@ -498,6 +456,526 @@ class MacroDataService:
         except Exception as e:
             logger.error("Error saving commodity prices to database: %s", str(e))
             self.repo.session.rollback()
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_leading_indicators_by_date_range(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch indicators from FRED and store them in the database for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching indicators from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            combined_data = self.fred_client.get_leading_indicators(start_date, end_date)
+            self._save_leading_indicators_to_db(combined_data)
+            logger.info("Successfully fetched and stored indicators")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_indicators_by_date_range: %s", str(e))
+            raise
+
+    def fetch_and_store_treasury_data_by_date_range(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch treasury yields and spreads from FRED and store them in the database for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching treasury data from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            treasury_data = self.fred_client.get_treasury_yields_and_spreads(start_date, end_date)
+            self._save_treasury_data_to_db(treasury_data)
+            logger.info("Successfully fetched and stored treasury data")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_treasury_data_by_date_range: %s", str(e))
+            raise
+
+    def fetch_and_store_consumer_indices_by_date_range(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch consumer-related indices from FRED and store them in the database for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching consumer indices from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            consumer_data = self.fred_client.get_consumer_indices(start_date, end_date)
+            self._save_consumer_indices_to_db(consumer_data)
+            logger.info("Successfully fetched and stored consumer indices")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_consumer_indices_by_date_range: %s", str(e))
+            raise
+
+    def fetch_and_store_financial_condition_indices_by_date_range(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch financial condition indices from FRED and store them in the database for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching financial condition indices from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            financial_data = self.fred_client.get_financial_condition_indices(start_date, end_date)
+            self._save_financial_condition_indices_to_db(financial_data)
+            logger.info("Successfully fetched and stored financial condition indices")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_financial_condition_indices_by_date_range: %s", str(e))
+            raise
+
+    def fetch_and_store_pmi_indicators_by_date_range(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch PMI indicators from Trading Economics and store them in the database for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching PMI indicators from Trading Economics for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            pmi_data = self.trading_economics_client.get_pmi_indicators(start_date, end_date)
+            self._save_pmi_indicators_to_db(pmi_data)
+            logger.info("Successfully fetched and stored PMI indicators")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_pmi_indicators_by_date_range: %s", str(e))
+            raise
+
+    def fetch_and_store_commodity_prices_by_date_range(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch commodity prices from Yahoo Finance and store them in the database for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching commodity prices from Yahoo Finance for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            commodity_data = self.yahoo_finance_client.get_commodity_prices(start_date, end_date)
+            self._save_commodity_prices_to_db(commodity_data)
+            logger.info("Successfully fetched and stored commodity prices")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_commodity_prices_by_date_range: %s", str(e))
+            raise
+
+    def fetch_and_store_leading_index(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch and store US Leading Index for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching US Leading Index from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            data = self.fred_client.get_leading_index(start_date, end_date)
+            if data is not None and not data.empty:
+                for _, row in data.iterrows():
+                    date = row['date']
+                    value = float(row['leading_index'])
+                    
+                    # Check and delete existing record
+                    existing_record = self.repo.find_by_type_and_date("USALOLITOAASTSAM", date)
+                    if existing_record:
+                        self.repo.delete(existing_record)
+                    
+                    # Save new record
+                    self.repo.create(
+                        type="USALOLITOAASTSAM",
+                        name="US_LEADING_INDEX",
+                        value=value,
+                        date_time=date,
+                        is_leading_indicator=True,
+                        region="US"
+                    )
+            logger.info("Successfully fetched and stored US Leading Index")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_leading_index: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_bbk_index(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch and store BBK Leading Index for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching BBK Leading Index from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            data = self.fred_client.get_bbk_index(start_date, end_date)
+            if data is not None and not data.empty:
+                for _, row in data.iterrows():
+                    date = row['date']
+                    value = float(row['bbk_index'])
+                    
+                    # Check and delete existing record
+                    existing_record = self.repo.find_by_type_and_date("BBKMLEIX", date)
+                    if existing_record:
+                        self.repo.delete(existing_record)
+                    
+                    # Save new record
+                    self.repo.create(
+                        type="BBKMLEIX",
+                        name="BBK_LEADING_INDEX",
+                        value=value,
+                        date_time=date,
+                        is_leading_indicator=True,
+                        region="US"
+                    )
+            logger.info("Successfully fetched and stored BBK Leading Index")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_bbk_index: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_treasury_yield_3m(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch and store 3-Month Treasury Yield for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching 3-Month Treasury Yield from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            data = self.fred_client.get_treasury_yield_3m(start_date, end_date)
+            if data is not None:
+                # Check and delete existing record
+                existing_record = self.repo.find_by_type_and_date("DGS3MO", end_date)
+                if existing_record:
+                    self.repo.delete(existing_record)
+                
+                # Save new record
+                self.repo.create(
+                    type="DGS3MO",
+                    name="TREASURY_3M_YIELD",
+                    value=float(data),
+                    date_time=end_date,
+                    is_leading_indicator=False,
+                    region="US"
+                )
+            logger.info("Successfully fetched and stored 3-Month Treasury Yield")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_treasury_yield_3m: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_treasury_yield_2y(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch and store 2-Year Treasury Yield for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching 2-Year Treasury Yield from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            data = self.fred_client.get_treasury_yield_2y(start_date, end_date)
+            if data is not None:
+                # Check and delete existing record
+                existing_record = self.repo.find_by_type_and_date("DGS2", end_date)
+                if existing_record:
+                    self.repo.delete(existing_record)
+                
+                # Save new record
+                self.repo.create(
+                    type="DGS2",
+                    name="TREASURY_2Y_YIELD",
+                    value=float(data),
+                    date_time=end_date,
+                    is_leading_indicator=False,
+                    region="US"
+                )
+            logger.info("Successfully fetched and stored 2-Year Treasury Yield")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_treasury_yield_2y: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_treasury_yield_10y(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch and store 10-Year Treasury Yield for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching 10-Year Treasury Yield from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            data = self.fred_client.get_treasury_yield_10y(start_date, end_date)
+            if data is not None:
+                # Check and delete existing record
+                existing_record = self.repo.find_by_type_and_date("DGS10", end_date)
+                if existing_record:
+                    self.repo.delete(existing_record)
+                
+                # Save new record
+                self.repo.create(
+                    type="DGS10",
+                    name="TREASURY_10Y_YIELD",
+                    value=float(data),
+                    date_time=end_date,
+                    is_leading_indicator=False,
+                    region="US"
+                )
+            logger.info("Successfully fetched and stored 10-Year Treasury Yield")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_treasury_yield_10y: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_consumer_credit(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch and store Consumer Credit for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching Consumer Credit from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            data = self.fred_client.get_consumer_credit(start_date, end_date)
+            if data is not None:
+                # Check and delete existing record
+                existing_record = self.repo.find_by_type_and_date("TOTALSL", end_date)
+                if existing_record:
+                    self.repo.delete(existing_record)
+                
+                # Save new record
+                self.repo.create(
+                    type="TOTALSL",
+                    name="CONSUMER_CREDIT",
+                    value=float(data),
+                    date_time=end_date,
+                    is_leading_indicator=False,
+                    region="US"
+                )
+            logger.info("Successfully fetched and stored Consumer Credit")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_consumer_credit: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_consumer_sentiment(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch and store Consumer Sentiment for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching Consumer Sentiment from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            data = self.fred_client.get_consumer_sentiment(start_date, end_date)
+            if data is not None:
+                # Check and delete existing record
+                existing_record = self.repo.find_by_type_and_date("UMCSENT", end_date)
+                if existing_record:
+                    self.repo.delete(existing_record)
+                
+                # Save new record
+                self.repo.create(
+                    type="UMCSENT",
+                    name="CONSUMER_SENTIMENT",
+                    value=float(data),
+                    date_time=end_date,
+                    is_leading_indicator=False,
+                    region="US"
+                )
+            logger.info("Successfully fetched and stored Consumer Sentiment")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_consumer_sentiment: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_disposable_income(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch and store Disposable Income for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching Disposable Income from FRED for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            data = self.fred_client.get_disposable_income(start_date, end_date)
+            if data is not None:
+                # Check and delete existing record
+                existing_record = self.repo.find_by_type_and_date("DSPIC96", end_date)
+                if existing_record:
+                    self.repo.delete(existing_record)
+                
+                # Save new record
+                self.repo.create(
+                    type="DSPIC96",
+                    name="DISPOSABLE_INCOME",
+                    value=float(data),
+                    date_time=end_date,
+                    is_leading_indicator=False,
+                    region="US"
+                )
+            logger.info("Successfully fetched and stored Disposable Income")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_disposable_income: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_crude_oil(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch and store Crude Oil Futures price for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching Crude Oil Futures from Yahoo Finance for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            data = self.yahoo_finance_client.get_crude_oil_price(start_date, end_date)
+            if data is not None:
+                # Check and delete existing record
+                existing_record = self.repo.find_by_type_and_date("CRUDE_OIL_FUT", end_date)
+                if existing_record:
+                    self.repo.delete(existing_record)
+                
+                # Save new record
+                self.repo.create(
+                    type="CRUDE_OIL_FUT",
+                    name="CRUDE_OIL_FUTURES",
+                    value=float(data),
+                    date_time=end_date,
+                    is_leading_indicator=False,
+                    region="US"
+                )
+            logger.info("Successfully fetched and stored Crude Oil Futures")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_crude_oil: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_gold(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch and store Gold Futures price for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching Gold Futures from Yahoo Finance for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            data = self.yahoo_finance_client.get_gold_price(start_date, end_date)
+            if data is not None:
+                # Check and delete existing record
+                existing_record = self.repo.find_by_type_and_date("GOLD_FUT", end_date)
+                if existing_record:
+                    self.repo.delete(existing_record)
+                
+                # Save new record
+                self.repo.create(
+                    type="GOLD_FUT",
+                    name="GOLD_FUTURES",
+                    value=float(data),
+                    date_time=end_date,
+                    is_leading_indicator=False,
+                    region="US"
+                )
+            logger.info("Successfully fetched and stored Gold Futures")
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_gold: %s", str(e))
             raise
         finally:
             self.repo.close()
