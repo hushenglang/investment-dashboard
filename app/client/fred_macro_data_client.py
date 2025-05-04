@@ -131,55 +131,64 @@ class FredMacroDataClient:
         logger.info("Fetched leading indicators with %d series", len(values))
         return values
 
-    def get_treasury_yields_and_spreads(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[float]]:
+    def get_treasury_yields_and_spreads(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[pd.Series]]:
         """
-        Fetch the latest Treasury yields (DGS3MO, DGS2, DGS10) and calculate key spreads.
+        Fetch all Treasury yields (DGS3MO, DGS2, DGS10) and calculate key spreads for the entire period.
 
         Args:
             start_date (datetime): The start date for the observation period.
             end_date (datetime): The end date for the observation period.
 
         Returns:
-            Dict[str, Optional[float]]: A dictionary containing the latest available yields
-                                         and the calculated spreads (10Y-2Y, 10Y-3M).
-                                         Returns None for a value if data is unavailable.
+            Dict[str, Optional[pd.Series]]: A dictionary containing all available yields
+                                         and the calculated spreads (10Y-2Y, 10Y-3M) as Series.
+                                         Returns None for a series if data is unavailable.
         """
         series_ids = ['DGS3MO', 'DGS2', 'DGS10']
-        latest_data = {}
+        series_data = {}
         fetch_errors = []
 
         for series_id in series_ids:
-            # Use the dedicated helper for fetching the latest value
+            # Use the dedicated helper for fetching all values
             value = self._get_fred_series_value(series_id, start_date, end_date)
             if value is not None:
                 key = series_id.lower()
-                latest_data[key] = value.iloc[-1] if not value.empty else None
+                series_data[key] = value if not value.empty else None
             else:
-                 fetch_errors.append(series_id)
-            # Logging for success/failure happens within the helper
+                fetch_errors.append(series_id)
 
         if fetch_errors:
-            logger.warning("Failed to fetch/process latest data for treasury series: %s", ", ".join(fetch_errors))
-            # Depending on requirements, we might want to raise an error here or return partial data.
-            # Currently returning partial data with None for missing values.
+            logger.warning("Failed to fetch/process data for treasury series: %s", ", ".join(fetch_errors))
 
-        # Calculate spreads
-        dgs10 = latest_data.get('dgs10')
-        dgs2 = latest_data.get('dgs2')
-        dgs3mo = latest_data.get('dgs3mo')
+        # Get the series
+        dgs10_series = series_data.get('dgs10')
+        dgs2_series = series_data.get('dgs2')
+        dgs3mo_series = series_data.get('dgs3mo')
 
-        spread_10y_2y = (dgs10 - dgs2) if dgs10 is not None and dgs2 is not None else None
-        spread_10y_3m = (dgs10 - dgs3mo) if dgs10 is not None and dgs3mo is not None else None
+        # Calculate spreads for all dates
+        spread_10y_2y = None
+        spread_10y_3m = None
+
+        if dgs10_series is not None and dgs2_series is not None:
+            # Align the series on their index and calculate the spread
+            aligned_10y, aligned_2y = dgs10_series.align(dgs2_series)
+            spread_10y_2y = aligned_10y - aligned_2y
+
+        if dgs10_series is not None and dgs3mo_series is not None:
+            # Align the series on their index and calculate the spread
+            aligned_10y, aligned_3m = dgs10_series.align(dgs3mo_series)
+            spread_10y_3m = aligned_10y - aligned_3m
 
         result = {
-            'dgs3mo': dgs3mo,
-            'dgs2': dgs2,
-            'dgs10': dgs10,
+            'dgs3mo': dgs3mo_series,
+            'dgs2': dgs2_series,
+            'dgs10': dgs10_series,
             'spread_10y_2y': spread_10y_2y,
             'spread_10y_3m': spread_10y_3m
         }
 
-        logger.info("Calculated Treasury yields and spreads: %s", result)
+        logger.info("Retrieved Treasury yields and calculated spreads for period %s to %s", 
+                   start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
         return result
 
     def get_consumer_indices(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[pd.Series]]:

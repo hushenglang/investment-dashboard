@@ -181,16 +181,16 @@ class MacroDataService:
         end_date = datetime.now()
         return self.fetch_and_store_treasury_data_by_date_range(start_date, end_date)
 
-    def _save_treasury_data_to_db(self, data: Dict[str, Optional[float]]):
+    def _save_treasury_data_to_db(self, data: Dict[str, Optional[pd.Series]]):
         """
         Save the fetched treasury data to the database.
         
         Args:
-            data: Dictionary containing the treasury yields and spreads
+            data: Dictionary containing the treasury yields and spreads where keys are indicator types
+                 and values are pandas Series with the indicator values
         """
         try:
             saved_count = 0
-            current_date = datetime.now()
             
             # Map of data keys to database indicator types and names
             treasury_indicators = {
@@ -202,24 +202,26 @@ class MacroDataService:
             }
             
             for data_key, (indicator_type, indicator_name) in treasury_indicators.items():
-                value = data.get(data_key)
-                if value is not None:
-                    # Check and delete existing record
-                    existing_record = self.repo.find_by_type_and_date(indicator_type, current_date)
-                    if existing_record:
-                        self.repo.delete(existing_record)
-                        logger.debug("Deleted existing %s record for date %s", indicator_name, current_date.strftime('%Y-%m-%d'))
-                    
-                    # Save new record
-                    self.repo.create(
-                        type=indicator_type,
-                        name=indicator_name,
-                        value=float(value),
-                        date_time=current_date,
-                        is_leading_indicator=False,
-                        region="US"
-                    )
-                    saved_count += 1
+                series = data.get(data_key)
+                if series is not None and not series.empty:
+                    for date, value in series.items():
+                        if pd.notna(value):  # Check if value is not NaN
+                            # Check and delete existing record
+                            existing_record = self.repo.find_by_type_and_date(indicator_type, date)
+                            if existing_record:
+                                self.repo.delete(existing_record)
+                                logger.debug("Deleted existing %s record for date %s", indicator_name, date.strftime('%Y-%m-%d'))
+                            
+                            # Save new record
+                            self.repo.create(
+                                type=indicator_type,
+                                name=indicator_name,
+                                value=float(value),
+                                date_time=date,
+                                is_leading_indicator=False,
+                                region="US"
+                            )
+                            saved_count += 1
             
             logger.info("Saved %d treasury records to database", saved_count)
         except Exception as e:
@@ -240,16 +242,16 @@ class MacroDataService:
         end_date = datetime.now()
         return self.fetch_and_store_consumer_indices_by_date_range(start_date, end_date)
     
-    def _save_consumer_indices_to_db(self, data: Dict[str, Optional[float]]):
+    def _save_consumer_indices_to_db(self, data: Dict[str, Optional[pd.Series]]):
         """
         Save the fetched consumer indices to the database.
         
         Args:
-            data: Dictionary containing the consumer indices
+            data: Dictionary containing the consumer indices where keys are indicator types
+                 and values are pandas Series with the indicator values
         """
         try:
             saved_count = 0
-            current_date = datetime.now()
             
             # Map of data keys to database indicator types and names
             consumer_indicators = {
@@ -259,24 +261,26 @@ class MacroDataService:
             }
             
             for data_key, (indicator_type, indicator_name) in consumer_indicators.items():
-                value = data.get(data_key)
-                if value is not None:
-                    # Check and delete existing record
-                    existing_record = self.repo.find_by_type_and_date(indicator_type, current_date)
-                    if existing_record:
-                        self.repo.delete(existing_record)
-                        logger.debug("Deleted existing %s record for date %s", indicator_name, current_date.strftime('%Y-%m-%d'))
-                    
-                    # Save new record
-                    self.repo.create(
-                        type=indicator_type,
-                        name=indicator_name,
-                        value=float(value),
-                        date_time=current_date,
-                        is_leading_indicator=False,
-                        region="US"
-                    )
-                    saved_count += 1
+                series = data.get(data_key)
+                if series is not None and not series.empty:
+                    for date, value in series.items():
+                        if pd.notna(value):  # Check if value is not NaN
+                            # Check and delete existing record
+                            existing_record = self.repo.find_by_type_and_date(indicator_type, date)
+                            if existing_record:
+                                self.repo.delete(existing_record)
+                                logger.debug("Deleted existing %s record for date %s", indicator_name, date.strftime('%Y-%m-%d'))
+                            
+                            # Save new record
+                            self.repo.create(
+                                type=indicator_type,
+                                name=indicator_name,
+                                value=float(value),
+                                date_time=date,
+                                is_leading_indicator=False,
+                                region="US"
+                            )
+                            saved_count += 1
             
             logger.info("Saved %d consumer index records to database", saved_count)
         except Exception as e:
@@ -297,16 +301,16 @@ class MacroDataService:
         end_date = datetime.now()
         return self.fetch_and_store_financial_condition_indices_by_date_range(start_date, end_date)
     
-    def _save_financial_condition_indices_to_db(self, data: Dict[str, Optional[float]]):
+    def _save_financial_condition_indices_to_db(self, data: Dict[str, Optional[pd.Series]]):
         """
         Save the fetched financial condition indices to the database.
         
         Args:
-            data: Dictionary containing the financial condition indices
+            data: Dictionary containing the financial condition indices where keys are indicator types
+                 and values are pandas Series with the indicator values
         """
         try:
             saved_count = 0
-            current_date = datetime.now()
             
             # Map of data keys to database indicator types and names
             financial_indicators = {
@@ -315,24 +319,26 @@ class MacroDataService:
             }
             
             for data_key, (indicator_type, indicator_name) in financial_indicators.items():
-                value = data.get(data_key)
-                if value is not None:
-                    # Check and delete existing record
-                    existing_record = self.repo.find_by_type_and_date(indicator_type, current_date)
-                    if existing_record:
-                        self.repo.delete(existing_record)
-                        logger.debug("Deleted existing %s record for date %s", indicator_name, current_date.strftime('%Y-%m-%d'))
-                    
-                    # Save new record
-                    self.repo.create(
-                        type=indicator_type,
-                        name=indicator_name,
-                        value=float(value),
-                        date_time=current_date,
-                        is_leading_indicator=False,
-                        region="US"
-                    )
-                    saved_count += 1
+                series = data.get(data_key)
+                if series is not None and not series.empty:
+                    for date, value in series.items():
+                        if pd.notna(value):  # Check if value is not NaN
+                            # Check and delete existing record
+                            existing_record = self.repo.find_by_type_and_date(indicator_type, date)
+                            if existing_record:
+                                self.repo.delete(existing_record)
+                                logger.debug("Deleted existing %s record for date %s", indicator_name, date.strftime('%Y-%m-%d'))
+                            
+                            # Save new record
+                            self.repo.create(
+                                type=indicator_type,
+                                name=indicator_name,
+                                value=float(value),
+                                date_time=date,
+                                is_leading_indicator=False,
+                                region="US"
+                            )
+                            saved_count += 1
             
             logger.info("Saved %d financial condition index records to database", saved_count)
         except Exception as e:
@@ -410,16 +416,16 @@ class MacroDataService:
         end_date = datetime.now()
         return self.fetch_and_store_commodity_prices_by_date_range(start_date, end_date)
     
-    def _save_commodity_prices_to_db(self, data: Dict[str, Optional[float]]):
+    def _save_commodity_prices_to_db(self, data: Dict[str, Optional[pd.Series]]):
         """
         Save the fetched commodity prices to the database.
         
         Args:
-            data: Dictionary containing the commodity prices
+            data: Dictionary containing the commodity prices where keys are indicator types
+                 and values are pandas Series with the indicator values
         """
         try:
             saved_count = 0
-            current_date = datetime.now()
             
             # Map of data keys to database indicator types and names
             commodity_indicators = {
@@ -428,24 +434,26 @@ class MacroDataService:
             }
             
             for data_key, (indicator_type, indicator_name) in commodity_indicators.items():
-                value = data.get(data_key)
-                if value is not None:
-                    # Check and delete existing record
-                    existing_record = self.repo.find_by_type_and_date(indicator_type, current_date)
-                    if existing_record:
-                        self.repo.delete(existing_record)
-                        logger.debug("Deleted existing %s record for date %s", indicator_name, current_date.strftime('%Y-%m-%d'))
-                    
-                    # Save new record
-                    self.repo.create(
-                        type=indicator_type,
-                        name=indicator_name,
-                        value=float(value),
-                        date_time=current_date,
-                        is_leading_indicator=False,
-                        region="US"
-                    )
-                    saved_count += 1
+                series = data.get(data_key)
+                if series is not None and not series.empty:
+                    for date, value in series.items():
+                        if pd.notna(value):  # Check if value is not NaN
+                            # Check and delete existing record
+                            existing_record = self.repo.find_by_type_and_date(indicator_type, date)
+                            if existing_record:
+                                self.repo.delete(existing_record)
+                                logger.debug("Deleted existing %s record for date %s", indicator_name, date.strftime('%Y-%m-%d'))
+                            
+                            # Save new record
+                            self.repo.create(
+                                type=indicator_type,
+                                name=indicator_name,
+                                value=float(value),
+                                date_time=date,
+                                is_leading_indicator=False,
+                                region="US"
+                            )
+                            saved_count += 1
             
             logger.info("Saved %d commodity price records to database", saved_count)
         except Exception as e:
