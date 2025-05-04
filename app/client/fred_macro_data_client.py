@@ -62,14 +62,14 @@ class FredMacroDataClient:
             # Re-raise the exception to be handled by the calling method
             raise Exception(f"Error fetching FRED series {series_id}: {str(e)}")
 
-    def _get_latest_fred_series_value(
+    def _get_fred_series_value(
         self,
         series_id: str,
         start_date: datetime,
         end_date: datetime
-    ) -> Optional[float]:
+    ) -> Optional[pd.Series]:
         """
-        Fetches a FRED series and returns the latest available non-null value.
+        Fetches a FRED series and returns all available non-null values.
 
         Args:
             series_id (str): The ID of the FRED series to fetch.
@@ -77,56 +77,59 @@ class FredMacroDataClient:
             end_date (datetime): The end date for the observation period.
 
         Returns:
-            Optional[float]: The latest non-null value, or None if no data is available
+            Optional[pd.Series]: The series data with all non-null values, or None if no data is available
                              or an error occurred.
         """
         try:
             data = self._fetch_fred_series(series_id, start_date, end_date)
-            # Get the last available non-NaN value
-            last_value = data.dropna().iloc[-1] if not data.dropna().empty else None
-            result = float(last_value) if last_value is not None else None
-            logger.info("Successfully processed latest value for series %s: %s", series_id, result)
+            # Drop any NaN values from the series
+            result = data.dropna()
+            if result.empty:
+                logger.warning("No non-null data available for series %s", series_id)
+                return None
+            logger.info("Successfully processed %d values for series %s", len(result), series_id)
             return result
         except Exception as e:
             # Error already logged in _fetch_fred_series or potentially here if processing fails
-            logger.error("Error processing latest value for series %s: %s", series_id, str(e))
+            logger.error("Error processing values for series %s: %s", series_id, str(e))
             return None # Return None on error
 
-    def get_leading_indicators(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[float]]:
+    def get_leading_indicators(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[pd.Series]]:
         """
-        Fetch the latest values for the US Leading Index (USALOLITOAASTSAM)
-        and Bundesbank Leading Index (BBKMLEIX) from FRED.
+        Fetch all values for the US Leading Index (USALOLITOAASTSAM)
+        and Bundesbank Leading Index (BBKMLEIX) from FRED within the specified date range.
 
         Args:
             start_date (datetime): The start date for the observation period.
             end_date (datetime): The end date for the observation period.
 
         Returns:
-            Dict[str, Optional[float]]: A dictionary containing the latest available values
-                                         for 'leading_index_us' and 'leading_index_de'.
-                                         Returns None for a value if data is unavailable or an error occurs.
+            Dict[str, Optional[pd.Series]]: A dictionary containing all available values
+                                          for 'leading_index_us' and 'leading_index_de'.
+                                          Returns None for a series if data is unavailable or an error occurs.
         """
         series_map = {
             'leading_index_us': 'USALOLITOAASTSAM',
             'leading_index_de': 'BBKMLEIX'
         }
-        latest_values: Dict[str, Optional[float]] = {}
+        values: Dict[str, Optional[pd.Series]] = {}
         fetch_errors: List[str] = []
 
-        logger.info("Fetching latest leading indicator values...")
+        logger.info("Fetching leading indicator values...")
         for key, series_id in series_map.items():
-            value = self._get_latest_fred_series_value(series_id, start_date, end_date)
-            latest_values[key] = value
-            if value is None:
+            value = self._get_fred_series_value(series_id, start_date, end_date)
+            if value is not None:
+                values[key] = value if not value.empty else None
+            else:
                 # Logged within the helper, but track errors here
                 fetch_errors.append(key)
 
         if fetch_errors:
-             logger.warning("Failed to fetch/process latest data for indicators: %s", ", ".join(fetch_errors))
+             logger.warning("Failed to fetch/process data for indicators: %s", ", ".join(fetch_errors))
              # Continue returning partial data
 
-        logger.info("Fetched latest leading indicators: %s", latest_values)
-        return latest_values
+        logger.info("Fetched leading indicators with %d series", len(values))
+        return values
 
     def get_treasury_yields_and_spreads(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[float]]:
         """
@@ -147,10 +150,11 @@ class FredMacroDataClient:
 
         for series_id in series_ids:
             # Use the dedicated helper for fetching the latest value
-            value = self._get_latest_fred_series_value(series_id, start_date, end_date)
-            key = series_id.lower()
-            latest_data[key] = value
-            if value is None:
+            value = self._get_fred_series_value(series_id, start_date, end_date)
+            if value is not None:
+                key = series_id.lower()
+                latest_data[key] = value.iloc[-1] if not value.empty else None
+            else:
                  fetch_errors.append(series_id)
             # Logging for success/failure happens within the helper
 
@@ -178,9 +182,9 @@ class FredMacroDataClient:
         logger.info("Calculated Treasury yields and spreads: %s", result)
         return result
 
-    def get_consumer_indices(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[float]]:
+    def get_consumer_indices(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[pd.Series]]:
         """
-        Fetch the latest values for consumer-related indicators from FRED:
+        Fetch all values for consumer-related indicators from FRED within the specified date range:
         - TOTALSL: Total Consumer Credit
         - UMCSENT: University of Michigan Consumer Sentiment
         - DSPIC96: Real Disposable Personal Income
@@ -190,35 +194,36 @@ class FredMacroDataClient:
             end_date (datetime): The end date for the observation period.
 
         Returns:
-            Dict[str, Optional[float]]: A dictionary containing the latest available values
-                                         for consumer-related indicators.
-                                         Returns None for a value if data is unavailable or an error occurs.
+            Dict[str, Optional[pd.Series]]: A dictionary containing all available values
+                                          for consumer-related indicators.
+                                          Returns None for a series if data is unavailable or an error occurs.
         """
         series_map = {
             'consumer_credit': 'TOTALSL',
             'consumer_sentiment': 'UMCSENT',
             'disposable_income': 'DSPIC96'
         }
-        latest_values: Dict[str, Optional[float]] = {}
+        values: Dict[str, Optional[pd.Series]] = {}
         fetch_errors: List[str] = []
 
-        logger.info("Fetching latest consumer indicator values...")
+        logger.info("Fetching consumer indicator values...")
         for key, series_id in series_map.items():
-            value = self._get_latest_fred_series_value(series_id, start_date, end_date)
-            latest_values[key] = value
-            if value is None:
+            value = self._get_fred_series_value(series_id, start_date, end_date)
+            if value is not None:
+                values[key] = value if not value.empty else None
+            else:
                 fetch_errors.append(key)
 
         if fetch_errors:
-            logger.warning("Failed to fetch/process latest data for consumer indicators: %s", ", ".join(fetch_errors))
+            logger.warning("Failed to fetch/process data for consumer indicators: %s", ", ".join(fetch_errors))
             # Continue returning partial data
 
-        logger.info("Fetched latest consumer indices: %s", latest_values)
-        return latest_values
+        logger.info("Fetched consumer indices with %d series", len(values))
+        return values
 
-    def get_financial_condition_indices(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[float]]:
+    def get_financial_condition_indices(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[pd.Series]]:
         """
-        Fetch the latest values for financial condition indicators from FRED:
+        Fetch all values for financial condition indicators from FRED within the specified date range:
         - NFCI: Chicago Fed National Financial Conditions Index
         - ANFCI: Chicago Fed Adjusted National Financial Conditions Index
 
@@ -227,27 +232,28 @@ class FredMacroDataClient:
             end_date (datetime): The end date for the observation period.
 
         Returns:
-            Dict[str, Optional[float]]: A dictionary containing the latest available values
-                                         for financial condition indicators.
-                                         Returns None for a value if data is unavailable or an error occurs.
+            Dict[str, Optional[pd.Series]]: A dictionary containing all available values
+                                          for financial condition indicators.
+                                          Returns None for a series if data is unavailable or an error occurs.
         """
         series_map = {
             'national_financial_conditions': 'NFCI',
             'adjusted_financial_conditions': 'ANFCI'
         }
-        latest_values: Dict[str, Optional[float]] = {}
+        values: Dict[str, Optional[pd.Series]] = {}
         fetch_errors: List[str] = []
 
-        logger.info("Fetching latest financial condition indicator values...")
+        logger.info("Fetching financial condition indicator values...")
         for key, series_id in series_map.items():
-            value = self._get_latest_fred_series_value(series_id, start_date, end_date)
-            latest_values[key] = value
-            if value is None:
+            value = self._get_fred_series_value(series_id, start_date, end_date)
+            if value is not None:
+                values[key] = value if not value.empty else None
+            else:
                 fetch_errors.append(key)
 
         if fetch_errors:
-            logger.warning("Failed to fetch/process latest data for financial condition indicators: %s", ", ".join(fetch_errors))
+            logger.warning("Failed to fetch/process data for financial condition indicators: %s", ", ".join(fetch_errors))
             # Continue returning partial data
 
-        logger.info("Fetched latest financial condition indices: %s", latest_values)
-        return latest_values
+        logger.info("Fetched financial condition indices with %d series", len(values))
+        return values

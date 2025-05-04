@@ -107,63 +107,60 @@ class MacroDataService:
         end_date = datetime.now()
         return self.fetch_and_store_leading_indicators_by_date_range(start_date, end_date)
 
-    def _save_leading_indicators_to_db(self, data: pd.DataFrame):
+    def _save_leading_indicators_to_db(self, data: Dict[str, Optional[pd.Series]]):
         """
         Save the fetched indicators to the database.
         
         Args:
-            data: DataFrame containing the indicators data
+            data: Dictionary containing the indicators data where keys are indicator types
+                 and values are pandas Series with the indicator values
         """
         try:
             saved_count = 0
-            for _, row in data.iterrows():
-                date = row['date']
-                
-                # Process Leading Index
-                if 'leading_index' in row and not pd.isna(row['leading_index']):
-                    indicator_type = "USALOLITOAASTSAM"
-                    indicator_name = "US_LEADING_INDEX"
-                    value = float(row['leading_index'])
-                    
-                    # Check and delete existing record
-                    existing_record = self.repo.find_by_type_and_date(indicator_type, date)
-                    if existing_record:
-                        self.repo.delete(existing_record)
-                        logger.debug("Deleted existing %s record for date %s", indicator_name, date.strftime('%Y-%m-%d'))
-                    
-                    # Save new record
-                    self.repo.create(
-                        type=indicator_type,
-                        name=indicator_name,
-                        value=value,
-                        date_time=date,
-                        is_leading_indicator=True,
-                        region="US"
-                    )
-                    saved_count += 1
-                
-                # Process BBK Index
-                if 'bbk_index' in row and not pd.isna(row['bbk_index']):
-                    indicator_type = "BBKMLEIX"
-                    indicator_name = "BBK_LEADING_INDEX"
-                    value = float(row['bbk_index'])
+            
+            # Process US Leading Index
+            if 'leading_index_us' in data and data['leading_index_us'] is not None:
+                us_data = data['leading_index_us']
+                for date, value in us_data.items():
+                    if pd.notna(value):  # Check if value is not NaN
+                        # Check and delete existing record
+                        existing_record = self.repo.find_by_type_and_date("USALOLITOAASTSAM", date)
+                        if existing_record:
+                            self.repo.delete(existing_record)
+                            logger.debug("Deleted existing US_LEADING_INDEX record for date %s", date.strftime('%Y-%m-%d'))
+                        
+                        # Save new record
+                        self.repo.create(
+                            type="USALOLITOAASTSAM",
+                            name="US_LEADING_INDEX",
+                            value=float(value),
+                            date_time=date,
+                            is_leading_indicator=True,
+                            region="US"
+                        )
+                        saved_count += 1
+            
+            # Process BBK Index (German Leading Index)
+            if 'leading_index_de' in data and data['leading_index_de'] is not None:
+                de_data = data['leading_index_de']
+                for date, value in de_data.items():
+                    if pd.notna(value):  # Check if value is not NaN
+                        # Check and delete existing record
+                        existing_record = self.repo.find_by_type_and_date("BBKMLEIX", date)
+                        if existing_record:
+                            self.repo.delete(existing_record)
+                            logger.debug("Deleted existing BBK_LEADING_INDEX record for date %s", date.strftime('%Y-%m-%d'))
 
-                    # Check and delete existing record
-                    existing_record = self.repo.find_by_type_and_date(indicator_type, date)
-                    if existing_record:
-                        self.repo.delete(existing_record)
-                        logger.debug("Deleted existing %s record for date %s", indicator_name, date.strftime('%Y-%m-%d'))
-
-                    # Save new record
-                    self.repo.create(
-                        type=indicator_type,
-                        name=indicator_name,
-                        value=value,
-                        date_time=date,
-                        is_leading_indicator=True,
-                        region="US"
-                    )
-                    saved_count += 1
+                        # Save new record
+                        self.repo.create(
+                            type="BBKMLEIX",
+                            name="BBK_LEADING_INDEX",
+                            value=float(value),
+                            date_time=date,
+                            is_leading_indicator=True,
+                            region="US"
+                        )
+                        saved_count += 1
             
             logger.info("Saved %d indicator records to database", saved_count)
         except Exception as e:
