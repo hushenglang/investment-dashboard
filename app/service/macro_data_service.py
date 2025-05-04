@@ -83,7 +83,7 @@ class MacroDataService:
         
         Returns:
             Dictionary containing the indicator values where keys are indicator types
-            and values are dictionaries with indicator details
+            and values are dictionaries with latest, prev_of_latest and all entries
         """
         try:
             logger.info("Retrieving China indicators from database for period %s to %s", 
@@ -94,18 +94,34 @@ class MacroDataService:
                 region="CHINA"
             )
             logger.info("Successfully retrieved %d China indicators", len(indicators))
-            indicators_dict = {  
-                indicator.type: {
+            
+            # Group indicators by type
+            indicators_by_type = {}
+            for indicator in indicators:
+                if indicator.type not in indicators_by_type:
+                    indicators_by_type[indicator.type] = []
+                indicators_by_type[indicator.type].append({
                     "type": indicator.type,
                     "name": indicator.name,
                     "value": indicator.value,
                     "date_time": indicator.date_time,
                     "is_leading_indicator": indicator.is_leading_indicator,
                     "region": indicator.region
+                })
+            
+            # Structure the result dictionary
+            result = {}
+            for indicator_type, indicator_list in indicators_by_type.items():
+                # Sort indicators by date_time in descending order
+                sorted_indicators = sorted(indicator_list, key=lambda x: x['date_time'], reverse=True)
+                
+                result[indicator_type] = {
+                    "latest": sorted_indicators[0] if sorted_indicators else {},
+                    "prev": sorted_indicators[1] if len(sorted_indicators) > 1 else {},
+                    "all": sorted_indicators
                 }
-                for indicator in indicators
-            }
-            return indicators_dict
+            
+            return result
         except Exception as e:
             logger.error("Error retrieving China indicators: %s", str(e))
             raise

@@ -18,8 +18,14 @@ class DateRangeRequest(BaseModel):
 
 @router.get("/us")
 async def get_us_economic_indicators(
-    start_date: datetime = Query(default_factory=lambda: datetime.now() - timedelta(days=30)),
-    end_date: datetime = Query(default_factory=lambda: datetime.now())
+    start_date: datetime = Query(
+        default_factory=lambda: datetime.now() - timedelta(days=30),
+        example="2024-01-01"
+    ),
+    end_date: datetime = Query(
+        default_factory=lambda: datetime.now(),
+        example="2025-05-01"
+    )
 ) -> Dict:
     """
     Get US economic indicators within a date range
@@ -49,8 +55,14 @@ async def get_us_economic_indicators(
 
 @router.get("/china")
 async def get_china_economic_indicators(
-    start_date: datetime = Query(default_factory=lambda: datetime.now() - timedelta(days=30)),
-    end_date: datetime = Query(default_factory=lambda: datetime.now())
+    start_date: datetime = Query(
+        default_factory=lambda: datetime.now() - timedelta(days=30),
+        example="2024-01-01"
+    ),
+    end_date: datetime = Query(
+        default_factory=lambda: datetime.now(),
+        example="2025-05-01"
+    )
 ) -> Dict:
     """
     Get China economic indicators within a date range
