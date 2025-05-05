@@ -5,6 +5,7 @@ from client.fred_macro_data_client import FredMacroDataClient
 from client.yahoo_finance_client import YahooFinanceClient
 from repository.macro_indicator_repo import MacroIndicatorRepository
 from config.logging_config import get_logger
+from client.akshare_finance_client import AkshareFinanceClient
 
 logger = get_logger(__name__)
 
@@ -989,6 +990,83 @@ class MacroDataService:
             return True
         except Exception as e:
             logger.error("Error in fetch_and_store_gold: %s", str(e))
+            raise
+        finally:
+            self.repo.close()
+
+    def fetch_and_store_china_gdp_growth(self, default_days: int = 180):
+        """
+        Fetch GDP growth data from Akshare and store them in the database.
+        
+        Args:
+            default_days (int): Number of days to look back for data (default: 180)
+        """
+        start_date = datetime.now() - timedelta(days=default_days)
+        end_date = datetime.now()
+        return self.fetch_and_store_china_gdp_growth_by_date_range(start_date, end_date)
+
+    def fetch_and_store_china_gdp_growth_by_date_range(self, start_date: datetime, end_date: datetime):
+        """
+        Fetch GDP growth data from Akshare and store them in the database for a specific date range.
+        
+        Args:
+            start_date (datetime): Start date of the range (inclusive)
+            end_date (datetime): End date of the range (inclusive)
+            
+        Returns:
+            bool: True if operation was successful
+        """
+        try:
+            logger.info("Fetching China GDP growth data from Akshare for period %s to %s", 
+                       start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            
+            # Initialize Akshare client
+            akshare_client = AkshareFinanceClient()
+            
+            # Fetch GDP data
+            gdp_data = akshare_client.get_china_gdp_growth(start_date, end_date)
+            
+            # Save the data
+            saved_count = 0
+            
+            # Map of data keys to database indicator types and names
+            gdp_indicators = {
+                'GDP': ('GDP', 'CHINA_GDP'),
+                'GDP_YOY': ('GDP_YOY', 'CHINA_GDP_YOY'),
+                'FIRST_INDUSTRY_GDP': ('FIRST_INDUSTRY_GDP', 'CHINA_FIRST_INDUSTRY_GDP'),
+                'FIRST_INDUSTRY_GDP_YOY': ('FIRST_INDUSTRY_GDP_YOY', 'CHINA_FIRST_INDUSTRY_GDP_YOY'),
+                'SECOND_INDUSTRY_GDP': ('SECOND_INDUSTRY_GDP', 'CHINA_SECOND_INDUSTRY_GDP'),
+                'SECOND_INDUSTRY_GDP_YOY': ('SECOND_INDUSTRY_GDP_YOY', 'CHINA_SECOND_INDUSTRY_GDP_YOY'),
+                'THIRD_INDUSTRY_GDP': ('THIRD_INDUSTRY_GDP', 'CHINA_THIRD_INDUSTRY_GDP'),
+                'THIRD_INDUSTRY_GDP_YOY': ('THIRD_INDUSTRY_GDP_YOY', 'CHINA_THIRD_INDUSTRY_GDP_YOY')
+            }
+            
+            for data_key, (indicator_type, indicator_name) in gdp_indicators.items():
+                series = gdp_data.get(data_key)
+                if series is not None and not series.empty:
+                    for date, value in series.items():
+                        if pd.notna(value):  # Check if value is not NaN
+                            # Check and delete existing record
+                            existing_record = self.repo.find_by_type_and_date(indicator_type, date)
+                            if existing_record:
+                                self.repo.delete(existing_record)
+                                logger.debug("Deleted existing %s record for date %s", indicator_name, date.strftime('%Y-%m-%d'))
+                            
+                            # Save new record
+                            self.repo.create(
+                                type=indicator_type,
+                                name=indicator_name,
+                                value=float(value),
+                                date_time=date,
+                                is_leading_indicator=True,
+                                region="CHINA"
+                            )
+                            saved_count += 1
+            
+            logger.info("Successfully fetched and stored GDP growth data. Saved %d records.", saved_count)
+            return True
+        except Exception as e:
+            logger.error("Error in fetch_and_store_gdp_growth_by_date_range: %s", str(e))
             raise
         finally:
             self.repo.close()

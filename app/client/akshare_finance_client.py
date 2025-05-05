@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 import pandas as pd
 from config.logging_config import get_logger
-
+from client.util.akshare_util import convert_gdp_dataframe
 logger = get_logger(__name__)
 
 class AkshareFinanceClient:
@@ -13,7 +13,7 @@ class AkshareFinanceClient:
         """Initialize the AkshareFinanceClient."""
         logger.info("AkshareFinanceClient initialized")
 
-    def get_gdp_growth(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[pd.Series]]:
+    def get_china_gdp_growth(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[pd.Series]]:
         """
         Fetch China's quarterly GDP growth rate for the specified date range.
         
@@ -26,30 +26,48 @@ class AkshareFinanceClient:
         """
         try:
             # Get GDP data
-            df = ak.macro_china_gdp()
-            if df.empty:
+            raw_gdp_df = ak.macro_china_gdp()
+            gdp_df = convert_gdp_dataframe(raw_gdp_df)
+            if gdp_df.empty:
                 logger.warning("No GDP data available")
                 return {'gdp_yoy': None}
-            
-            # Convert date column to datetime
-            df['季度'] = pd.to_datetime(df['季度'])
-            
+                        
             # Filter by date range
-            mask = (df['季度'] >= start_date) & (df['季度'] <= end_date)
-            df_filtered = df[mask]
-            
-            if df_filtered.empty:
+            gdp_df_filtered = gdp_df[(gdp_df.DATE>=pd.to_datetime(start_date)) & (gdp_df.DATE<=pd.to_datetime(end_date))]
+          
+            if gdp_df_filtered.empty:
                 logger.warning("No GDP data available for specified date range")
-                return {'gdp_yoy': None}
-            
-            # Create time series with date index
-            gdp_series = pd.Series(df_filtered['GDP同比增长'].astype(float).values, index=df_filtered['季度'])
+                return {'GDP': None,
+                        'GDP_YOY': None,
+                        'FIRST_INDUSTRY_GDP': None,
+                        'FIRST_INDUSTRY_GDP_YOY': None,
+                        'SECOND_INDUSTRY_GDP': None,
+                        'SECOND_INDUSTRY_GDP_YOY': None,
+                        'THIRD_INDUSTRY_GDP': None,
+                        'THIRD_INDUSTRY_GDP_YOY': None,
+                        }
             
             logger.info("Successfully fetched GDP growth rate time series")
-            return {'gdp_yoy': gdp_series}
+            return {'GDP': pd.Series(gdp_df_filtered['GDP'].astype(float).values, index=gdp_df_filtered['DATE']),
+                    'GDP_YOY': pd.Series(gdp_df_filtered['GDP_YOY'].astype(float).values, index=gdp_df_filtered['DATE']),
+                    'FIRST_INDUSTRY_GDP': pd.Series(gdp_df_filtered['FIRST_INDUSTRY_GDP'].astype(float).values, index=gdp_df_filtered['DATE']),
+                    'FIRST_INDUSTRY_GDP_YOY': pd.Series(gdp_df_filtered['FIRST_INDUSTRY_GDP_YOY'].astype(float).values, index=gdp_df_filtered['DATE']),
+                    'SECOND_INDUSTRY_GDP': pd.Series(gdp_df_filtered['SECOND_INDUSTRY_GDP'].astype(float).values, index=gdp_df_filtered['DATE']),
+                    'SECOND_INDUSTRY_GDP_YOY': pd.Series(gdp_df_filtered['SECOND_INDUSTRY_GDP_YOY'].astype(float).values, index=gdp_df_filtered['DATE']),
+                    'THIRD_INDUSTRY_GDP': pd.Series(gdp_df_filtered['THIRD_INDUSTRY_GDP'].astype(float).values, index=gdp_df_filtered['DATE']),
+                    'THIRD_INDUSTRY_GDP_YOY': pd.Series(gdp_df_filtered['THIRD_INDUSTRY_GDP_YOY'].astype(float).values, index=gdp_df_filtered['DATE']),
+                    }
         except Exception as e:
             logger.error("Error fetching GDP growth rate: %s", str(e))
-            return {'gdp_yoy': None}
+            return {'GDP': None,
+                    'GDP_YOY': None,
+                    'FIRST_INDUSTRY_GDP': None,
+                    'FIRST_INDUSTRY_GDP_YOY': None,
+                    'SECOND_INDUSTRY_GDP': None,
+                    'SECOND_INDUSTRY_GDP_YOY': None,
+                    'THIRD_INDUSTRY_GDP': None,
+                    'THIRD_INDUSTRY_GDP_YOY': None,
+                    }
 
     def get_industrial_production(self, start_date: datetime, end_date: datetime) -> Dict[str, Optional[pd.Series]]:
         """

@@ -115,12 +115,13 @@ async def fetch_and_store_all_macro_indices(
         
         # Fetch and store all different types of indices
         results = {
-            "leading_indicators": service.fetch_and_store_leading_indicators_by_date_range(date_range.start_date, date_range.end_date),
-            "consumer_indices": service.fetch_and_store_consumer_indices_by_date_range(date_range.start_date, date_range.end_date),
-            "financial_condition_indices": service.fetch_and_store_financial_condition_indices_by_date_range(date_range.start_date, date_range.end_date),
-            "treasury_data": service.fetch_and_store_treasury_data_by_date_range(date_range.start_date, date_range.end_date),
-            # "pmi_indicators": service.fetch_and_store_pmi_indicators_by_date_range(date_range.start_date, date_range.end_date),
-            "commodity_prices": service.fetch_and_store_commodity_prices_by_date_range(date_range.start_date, date_range.end_date)
+            # "leading_indicators": service.fetch_and_store_leading_indicators_by_date_range(date_range.start_date, date_range.end_date),
+            # "consumer_indices": service.fetch_and_store_consumer_indices_by_date_range(date_range.start_date, date_range.end_date),
+            # "financial_condition_indices": service.fetch_and_store_financial_condition_indices_by_date_range(date_range.start_date, date_range.end_date),
+            # "treasury_data": service.fetch_and_store_treasury_data_by_date_range(date_range.start_date, date_range.end_date),
+            # # "pmi_indicators": service.fetch_and_store_pmi_indicators_by_date_range(date_range.start_date, date_range.end_date),
+            # "commodity_prices": service.fetch_and_store_commodity_prices_by_date_range(date_range.start_date, date_range.end_date),
+            "china_gdp_data": service.fetch_and_store_china_gdp_growth_by_date_range(date_range.start_date, date_range.end_date)
         }
         
         response = {
